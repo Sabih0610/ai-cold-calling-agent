@@ -1,0 +1,22 @@
+# Sensitive files
+.env
+*.key
+*.pem
+
+# Logs and data
+logs/
+outputs/
+__pycache__/
+*.log
+
+# Virtual environments
+venv/
+winvenv/
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Voice models
+voices/
