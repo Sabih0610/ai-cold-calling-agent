@@ -600,7 +600,7 @@
     "reply": "Sure! I'm from CloumenAI, and we specialize in web development, app creation, and AI-driven cloud solutions. We help businesses streamline their operations with smart technology. Have you ever considered using AI tools for your work or projects?"
   },
   "thank you": {
-    "count": 8,
+    "count": 12,
     "reply": "You're very welcome!"
   },
   "king may i know who is this": {
@@ -1850,5 +1850,425 @@
   "like you could say a big chip you like a 100 gpu": {
     "count": 2,
     "reply": "Wow, that's a serious setup! We can provide scalable GPU clusters to handle heavy AI workloads like that, so you don't have to manage the hardware yourself. Would you like to explore how our cloud could support your project's specific needs?"
+  },
+  "hey this is james who is this": {
+    "count": 2,
+    "reply": "Hi James, this is CloumenAI calling. How can I help you today?"
+  },
+  "i'll tell him something about excel": {
+    "count": 2,
+    "reply": "Oh, I see. Are you looking for help with Excel, or is this about something else?"
+  },
+  "i said that tell me something about yourself": {
+    "count": 2,
+    "reply": "Sure - we provide AI, cloud, and web services to help with tasks like Excel automation. Are you interested in learning how we can assist with that?"
+  },
+  "well i don't want anything with excel automation or anything i want a website that's why i'm giving you a call": {
+    "count": 2,
+    "reply": "Got it, so you're interested in a website. We can definitely help with that. What kind of website are you thinking about?"
+  },
+  "i don't want anything with excel automation or anything i want a website that's why i'm giving you a call": {
+    "count": 2,
+    "reply": "Got it, so you're interested in a website. We can definitely help with that. What kind of website are you thinking about?"
+  },
+  "like an e-commerce platform": {
+    "count": 2,
+    "reply": "Oh, an e-commerce platform with animations-that's a great combination. Would you like to explore options for AI-driven product recommendations or automated customer support to enhance the shopping experience?"
+  },
+  "i don't know anything about that you tell me": {
+    "count": 2,
+    "reply": "Of course. For an e-commerce site, we can help with everything from design to secure payments and inventory management. Would you like me to walk you through the key features we offer?"
+  },
+  "alright this is james p king man i know who's this": {
+    "count": 2,
+    "reply": "Hi James,thanks for taking my call.I'm with Cloumen - we help businesses modernize their tech stack with AI and automation.Have you ever looked into ways to streamlineyour workflows or improve your digital presence?"
+  },
+  "what is the name of this song": {
+    "count": 2,
+    "reply": "Hmm,I'm not sure about the song name,James - but I can tell you wehelp businesses tune up their digital systems.For example,if your website is running slow or yourteam is stuck on manual tasks,we can help automate that.Does any of that sound like a challengeyou're facing right now?"
+  },
+  "hi this is james": {
+    "count": 2,
+    "reply": "Uh, yeah, this is James. Who's calling?"
+  },
+  "man who is this": {
+    "count": 2,
+    "reply": "Hi James,this is Alex from Cloumen - sorry forthe surprise call.We help businesses upgrade their digital tools withAI and automation.Have you thought about ways to make yoursystems faster or more efficient lately?"
+  },
+  "my name is james": {
+    "count": 4,
+    "reply": "Right,James - thanks for confirming.We specialize in helping businesses automate tasks andimprove their online performance.Are you dealing with any slow systems ormanual processes that eat up your team's time?"
+  },
+  "who are you": {
+    "count": 2,
+    "reply": "I'm calling from Cloumen - we specialize in building high-performance digital solutions."
+  },
+  "yeah continue": {
+    "count": 2,
+    "reply": "Great.We help companies automate workflows,speed up their websites,and get clearer insights from their data.For example,are you currently facing any bottlenecks with youronline systems or analytics?"
+  },
+  "i'm going to the end": {
+    "count": 2,
+    "reply": "Understood,James - I won't take much more ofyour time.Just one quick question:if we could help make your systems fasteror more automated,would you be open to a short follow-up chat another time?"
+  },
+  "hola hola mi chico": {
+    "count": 2,
+    "reply": "Haha,hola!Sounds like you're in good spirits.Just to wrap up quickly - if yourbusiness ever needs a tech boost with AIor automation,we're here to help.Would it be alright if we reached outanother time?"
+  },
+  "so yeah why are we giving me a call": {
+    "count": 2,
+    "reply": "We're reaching out because we help businesses likeyours upgrade their digital tools-things like automating manualtasks,speeding up websites,or improving data insights.If any of that sounds relevant,would you be open to a quick consultationto explore further?"
+  },
+  "so yeah why are you giving me a call": {
+    "count": 2,
+    "reply": "We're reaching out because we help businesses likeyours upgrade their digital tools-things like automating manualtasks,speeding up websites,or improving data insights.If any of that sounds relevant,would you be open to a quick consultationto explore further?"
+  },
+  "i don't know you tell me why are you giving me a call": {
+    "count": 2,
+    "reply": "Fair question,James.We call businesses that we believe could benefitfrom modernizing their digital setup-whether that's through automatingrepetitive tasks,speeding up online services,or getting more value from data.If any of those areas sound like theymight be a fit for you,I'd be happy to set up a quickchat with one of our specialists.Does that sound useful?"
+  },
+  "yeah but are you getting up all": {
+    "count": 2,
+    "reply": "I'm not sure I follow the question completely,James.Let me clarify - we're reaching out tosee if you're dealing with any slow systems,manual work,or data challenges that we could help solve.If that's something you'd like to explore,we can set up a quick chat.Does that make sense?"
+  },
+  "so my name's gary you are giving me a call": {
+    "count": 2,
+    "reply": "Hi Gary!Thanks for taking my call.My name's [Your Name] from Cloumen - wespecialize in AI-powered digital solutions to help businessesrun faster and smarter.How are things going with your current techsetup?"
+  },
+  "yeah i think the line got disconnected": {
+    "count": 2,
+    "reply": "Ah,sorry about that Gary - must be aglitch in the connection.So as I was saying,we help businesses modernize their systems with AI,automation,and custom web or app solutions.Are you finding any areas where your currenttech might be slowing you down - maybewith manual tasks or outdated software?"
+  },
+  "hi my name is james very polling me": {
+    "count": 2,
+    "reply": "Hi James, thanks for taking my call. I am from Cloumen - we help businesses with AI, web development, and cloud solutions to improve efficiency and growth. What kind of technology or tools are you currently using in your business?"
+  },
+  "well i'm currently i'm not using any kind of a tool in my business and how could these tools that you are offering me could help grow my business": {
+    "count": 2,
+    "reply": "Oh, I see. Well, starting with even basic tools can help automate manual tasks, bring in more leads, and give you clearer insights into your business performance. What's the biggest challenge you are facing in your operations right now?"
+  },
+  "well right now the": {
+    "count": 2,
+    "reply": "Hmm, take your time. I am just curious-are you spending a lot of hours on repetitive tasks, or is it more about reaching new customers?"
+  },
+  "challenge i'm facing right now you could say with potential customers i'm not getting enough lines right now": {
+    "count": 2,
+    "reply": "I understand-getting a steady flow of quality leads can be tough. We often help businesses improve their online presence and use targeted digital marketing to attract more potential customers. Would you be open to a quick 15-minute chat later this week to explore some simple strategies that could work for you?"
+  },
+  "in the hilt is": {
+    "count": 2,
+    "reply": "Hmm, I am not sure I caught that-could you clarify? Are you referring to a tech stack or a current project you are working on?"
+  },
+  "where are you calling me right now": {
+    "count": 2,
+    "reply": "we are based in the US, but we serve clients globally. Are you currently facing any challenges with your website, app, or internal systems that we could help streamline?"
+  },
+  "will my name's jonathan and could you please tell me a bit about your business": {
+    "count": 2,
+    "reply": "Hi Jonathan, thanks for asking. We help businesses like yours by building AI tools, modern websites, and clear data dashboards to save time and boost growth. What kind of business are you in, and what's your main role there?"
+  },
+  "well my name is jonathan and i'm into and i'm a doctor": {
+    "count": 2,
+    "reply": "Hi Jonathan, thanks for sharing that. So you are a doctor - do you run your own practice, or are you part of a larger medical group?"
+  },
+  "pitch_clinic": {
+    "count": 2,
+    "reply": "For clinics, we automate appointment intake and reminders, and clean up reporting so you see patient flow clearly. Is reducing no-shows a priority?"
+  },
+  "well not a priority you could say yeah but it would be good but i'm not mainly focused on that particular part": {
+    "count": 2,
+    "reply": "Hmm, I see. What part of running your practice takes up the most of your time right now?"
+  },
+  "well i'm into like you could say a clothing business i'm a manufacturer and i own multiple shops of clothes": {
+    "count": 2,
+    "reply": "Oh, that is great! So you are handling both the manufacturing and the retail side. I am curious, when it comes to managing your shops and production, what's the biggest time-consuming task you face right now?"
+  },
+  "pricing_guard": {
+    "count": 9,
+    "reply": "We tailor pricing to scope. If we come back with the most competitive price and a value-for-money outcome, would you be open to exploring it?"
+  },
+  "well my name is jonathan and i am a doctor": {
+    "count": 2,
+    "reply": "Hi Jonathan, thanks for sharing that. I imagine managing a medical practice involves a lot of administrative work. Are there any manual or repetitive tasks you'd love to automate to free up more time?"
+  },
+  "well yeah i want to automate my schedule finally i have a deafness right now and i want to fire her and make all the things automated pretty helpful with that": {
+    "count": 2,
+    "reply": "Oh, I see. Automating the scheduling process could definitely save you a lot of time and hassle. What does your current setup look like-are you using any specific software for appointments right now?"
+  },
+  "no yeah you could say that we really manage our upon system using excel": {
+    "count": 2,
+    "reply": "Using Excel for scheduling can get pretty manual and time-consuming. We could build a custom system that automates bookings and sends reminders, tailored for a medical practice. Would you be open to a quick 15-minute chat next week to explore how that might work?"
+  },
+  "yeah it depends but let's put the schedule and appointment with you guys so that": {
+    "count": 2,
+    "reply": "Great, I can help set that up. What's the best email to send a calendar invite to, and are mornings or afternoons generally better for you?"
+  },
+  "i know you guys are a little much more and better": {
+    "count": 2,
+    "reply": "Thanks, Jonathan. To get that meeting scheduled, what's your email address and preferred time of day?"
+  },
+  "well you could schedule a meeting on like friday at 8pm": {
+    "count": 2,
+    "reply": "Sure, I can look for a slot around Friday at 8 PM. To send the calendar invite, could you please share your email address?"
+  },
+  "well my name is talha and i usually run a software company": {
+    "count": 2,
+    "reply": "Hi Talha What kind of software does your company specialize in?"
+  },
+  "create an app where people usually pee on themselves": {
+    "count": 2,
+    "reply": "I see. Are you looking to make your app development process faster or more efficient?"
+  },
+  "they usually pee from their asses": {
+    "count": 2,
+    "reply": "I understand. Are you currently facing any specific challenges with your app's development or user engagement?"
+  },
+  "aren't able to peed": {
+    "count": 2,
+    "reply": "I understand. Are you looking to improve the user experience or fix technical issues with your app?"
+  },
+  "yeah i'm looking to improve the user experiences like people should be able to feel a little bit better and from the penis not from the rest": {
+    "count": 2,
+    "reply": "I understand you want to improve the user experience. Are you currently working with a development team on this project?"
+  },
+  "i pee myself": {
+    "count": 2,
+    "reply": "I am sorry to hear that. Would you like to discuss how we can help improve your app's functionality?"
+  },
+  "could help me": {
+    "count": 2,
+    "reply": "Absolutely minute call this week to discuss it?"
+  },
+  "i don't want to share my name you tell me about yourself a little bit": {
+    "count": 2,
+    "reply": "Of course. Are there any manual processes in your work that take up too much time?"
+  },
+  "there are certainly some process that usually takes a lot of time but i don't want to share those kind of process with you because they are certainly private": {
+    "count": 2,
+    "reply": "I completely understand the need for privacy. minute chat to see if we can help?"
+  },
+  "i'm into technology business i'm a software developer and i own a software company": {
+    "count": 2,
+    "reply": "Great to meet a fellow tech leader. and what kind of software does your company focus on?"
+  },
+  "well i'm into technology business i want to start for a company and i usually build apps": {
+    "count": 2,
+    "reply": "Great to hear you build apps. What kind of apps do you usually focus on?"
+  },
+  "all kind of a depend on the client's requirements": {
+    "count": 2,
+    "reply": "That makes sense. Are you currently working on any specific app project right now?"
+  },
+  "well not right now i'm looking for some pliers": {
+    "count": 2,
+    "reply": "I see. Are you looking for tools to help with app development or client management?"
+  },
+  "i am looking for clients i am having difficulty finding clients": {
+    "count": 2,
+    "reply": "We can help with lead generation and digital marketing to find new clients. Would you be open to a quick chat about that?"
+  },
+  "certainly i would be open for a quick chat about that but how could you guarantee that with you guys i am able to land some clients": {
+    "count": 2,
+    "reply": "We cannot guarantee specific results Would you like to see some examples of our work?"
+  },
+  "yes show": {
+    "count": 2,
+    "reply": "Great. What's the best email address for you?"
+  },
+  "i own a software company and my name is jonathan": {
+    "count": 2,
+    "reply": "Hi Jonathan What kind of software does your company focus on developing?"
+  },
+  "my name is jonathan and i'm into a software business i own a software company and we usually develop mobile applications": {
+    "count": 2,
+    "reply": "Hi Jonathan What's the biggest challenge your team faces with mobile app development right now?"
+  },
+  "well the biggest challenges we are facing right now is getting consistent lead flow we aren't getting like many clients as we are expecting": {
+    "count": 2,
+    "reply": "I understand how frustrating that can be. Would you be open to a quick chat about improving your lead flow?"
+  },
+  "well my name is jonathan and i'm into a software business well and we usually develop mobile applications": {
+    "count": 2,
+    "reply": "Hi Jonathan house right now?"
+  },
+  "yeah be doing house": {
+    "count": 2,
+    "reply": "Great to hear What's the biggest challenge you face with your mobile app development right now?"
+  },
+  "well the biggest challenge we face right now is that we aren't able to get consistent lead flow and we aren't closing as much clients as we were expecting like we have a big team but we are facing challenge in consistent lead flow and marketing": {
+    "count": 2,
+    "reply": "I understand how frustrating that can be. Would you be open to a quick chat about improving your lead flow?"
+  },
+  "well my name is jonathan and we are into software business we'd like to be developed mobile applications": {
+    "count": 2,
+    "reply": "Hi Jonathan What's the biggest challenge you are facing with your current app development?"
+  },
+  "well my name is jonathan and i'm into a software business and we mostly build mobile applications": {
+    "count": 2,
+    "reply": "Hi Jonathan, great to connect with a fellow software business owner. What's the biggest challenge you face with your mobile app projects right now?"
+  },
+  "well the biggest problem we are facing right now is with the consistent client consistent consistent leads we aren't getting leads and we aren't able to close as much clients as we expected": {
+    "count": 2,
+    "reply": "I understand how frustrating it can be when the leads are not coming in consistently. Are you currently using any specific strategies to attract new clients for your mobile apps?"
+  },
+  "yeah we usually run digital marketing from an agency and they're charging us for ppc as well and do smm as well yeah but we are getting leads consistently but we aren't able to close them our conversion ratio is not as good as we are expecting": {
+    "count": 2,
+    "reply": "that is a common challenge when the leads are not the right fit. Would you be open to a quick chat about improving your lead quality and conversion rates?"
+  },
+  "pitch_ecommerce": {
+    "count": 8,
+    "reply": "For e-commerce, we add AI chat for conversion and automate support. We also build dashboards for ROAS and inventory. Should we explore a quick win?"
+  },
+  "yeah why not": {
+    "count": 7,
+    "reply": "Great. What's the best email to send a short invite?"
+  },
+  "well instead of that could you please clarify what we will do for our business like convince me like your surveys are the best and it will be beneficial for me to go out with you guys": {
+    "count": 2,
+    "reply": "We help shoe businesses automate customer support and track sales trends. Would a 10-minute chat to show you specific benefits work?"
+  },
+  "yeah but i don't usually go do a chat you could tell me right here in this conversation": {
+    "count": 2,
+    "reply": "I understand. Could you tell me your biggest daily hassle?"
+  },
+  "well the biggest hassle i get is usually with getting more clients like my work is running but i'm not getting many clients as much as i want": {
+    "count": 2,
+    "reply": "We specialize in using AI to attract and convert more customers for shoe stores. Can I ask how you currently find new clients?"
+  },
+  "well we usually do social media marketing right now": {
+    "count": 2,
+    "reply": "that is a great start. Are you tracking which social posts actually lead to sales?"
+  },
+  "yeah i have some of the post not videos some post like graphical images that have given me some revenue but not as much as i expected them to be": {
+    "count": 2,
+    "reply": "We can analyze those posts to find what works and scale it up. Would you be open to a quick 15-minute strategy call this week?"
+  },
+  "yeah that would be great": {
+    "count": 2,
+    "reply": "Perfect. What's the best email to send the calendar invite?"
+  },
+  "i would be": {
+    "count": 2,
+    "reply": "Great. What'sa good day for you, Tuesday or Wednesday?"
+  },
+  "well not huge awareness actually friday works for me": {
+    "count": 2,
+    "reply": "Friday works. Morning or afternoon for our 15-minute chat?"
+  },
+  "anyone there": {
+    "count": 2,
+    "reply": "Yes, I am here. May I ask who I am speaking with?"
+  },
+  "my name's jonathan why don't you give me a call": {
+    "count": 2,
+    "reply": "Hi Jonathan, I am Emma from Cloumen and I am calling you right now. Are you the person who makes technology decisions for your business?"
+  },
+  "yeah actually i'm the only one out of my business so that's why i'm giving no call i guess": {
+    "count": 2,
+    "reply": "I understand, Jonathan. What kind of manual tasks take up most of your time right now?"
+  },
+  "well he just asked that i usually perform it like managing excel sheet and like conducting interviews and mostly things like that like operations": {
+    "count": 2,
+    "reply": "That sounds like a lot of manual work, Jonathan. Would you be open to a quick chat about automating some of those tasks?"
+  },
+  "yeah yeah if it would be beneficial and i could save time and money then i guess it would be valuable": {
+    "count": 2,
+    "reply": "Great, I can show you how we help with that. Are you free for a brief 15-minute call later this week?"
+  },
+  "yeah i guess": {
+    "count": 2,
+    "reply": "Perfect. What's the best email to send a calendar invite to?"
+  },
+  "well you can send me an email to like jonathan at direct emailcom": {
+    "count": 2,
+    "reply": "Got it, Jonathan at direct email dot com. I will send a few time options over shortly."
+  },
+  "look abhik who named this": {
+    "count": 2,
+    "reply": "My name is Emma, from Cloumen. Is there anything else I can help with today?"
+  },
+  "yeah you": {
+    "count": 2,
+    "reply": "Great. What's the best time for our quick call this week?"
+  },
+  "hello what's your name": {
+    "count": 1,
+    "reply": "I am Emma from Cloumen. what is the biggest time drain in your e-commerce operations right now?"
+  },
+  "it's jonathan at wwwdirvateammelcom": {
+    "count": 1,
+    "reply": "Thanks Jonathan. Would 10am tomorrow work for a quick chat?"
+  },
+  "not there with": {
+    "count": 1,
+    "reply": "No problem. what is a good time and day next week for you?"
+  },
+  "it's my your can you repeat my can you repeat can you repeat my": {
+    "count": 1,
+    "reply": "Of course. Is that correct?"
+  },
+  "could you repeat my email": {
+    "count": 1,
+    "reply": "I have Jonathan at www.DirVaTeammel.com. Is that correct?"
+  },
+  "now it's jonathan at therategmailcom": {
+    "count": 1,
+    "reply": "Got it, Jonathan at therategmail.com. Is that correct?"
+  },
+  "it's jonathan at theraidgmailcom": {
+    "count": 1,
+    "reply": "Thanks Jonathan. what is a good time for you this week?"
+  },
+  "well you could say on friday at 8 pm": {
+    "count": 1,
+    "reply": "Perfect. What timezone are you in?"
+  },
+  "in eastern time zone": {
+    "count": 1,
+    "reply": "Great, I will send a calendar invite for Friday 8 PM ET. Does that work?"
+  },
+  "yeah that works": {
+    "count": 1,
+    "reply": "Excellent. we will send the invite shortly."
+  },
+  "well you could say my best email is jonathan123 at diraygmailcom": {
+    "count": 1,
+    "reply": "Got it, Jonathan123 at diraygmail.com. what is a good day for you, early next week?"
+  },
+  "well you could say friday at 8pm eastern time": {
+    "count": 1,
+    "reply": "Perfect, I have noted Friday at 8pm Eastern. I will send the calendar invite shortly."
+  },
+  "all right when you look at the end of the video": {
+    "count": 1,
+    "reply": "I am not sure I follow. Could you clarify what you mean by the end of the video?"
+  },
+  "well it's not under add it not by the end of the video i'm asking that when will you stand me the invite link": {
+    "count": 1,
+    "reply": "I will send the invite link to your email right now. Will you be able to check for it in the next few minutes?"
+  },
+  "i already told you it's jonathan123 at wwwderivategmailcom": {
+    "count": 1,
+    "reply": "Thank you for confirming Jonathan123 at derivategmail.com. Is there anything else I can assist with today?"
+  },
+  "well i already told you my email why were you confirming me from it again": {
+    "count": 1,
+    "reply": "I apologize for the repetition. I was just making sure I had it exactly right before sending the invite."
+  },
+  "well repeat the email for me": {
+    "count": 1,
+    "reply": "Your email is Jonathan123 at derivategmail.com. Is that correct?"
+  },
+  "yeah that is correct": {
+    "count": 1,
+    "reply": "Perfect. The meeting invite is on its way to Jonathan123 at derivategmail.com."
+  },
+  "well you have already said that but i'm asking for you like how would you serve with me beneficial for me": {
+    "count": 1,
+    "reply": "We'd start by automating your customer support to save you time. Would a quick 15-minute chat to outline this work for you?"
+  },
+  "yeah sure why not": {
+    "count": 1,
+    "reply": "Great. what is the best email to send a brief proposal and find a 15-minute slot?"
   }
 }
