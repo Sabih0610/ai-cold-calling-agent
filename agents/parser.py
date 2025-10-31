@@ -5,6 +5,7 @@ Deterministic parser: accepts either
 
 Produces: {meta:{tone,style}, sections:[{id,title,items:[{type,text}]}], plan:[section_ids], opener}
 """
+#agents\parser.py
 import re, uuid
 
 def parse(script_text: str) -> dict:

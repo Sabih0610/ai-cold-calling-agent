@@ -2,6 +2,7 @@
 Flow object that yields tiny per-turn hints and advances after bot replies.
 Also exports flow.json and flow.mmd content helpers.
 """
+#agents\flow.py
 import json
 
 class Flow:

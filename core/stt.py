@@ -6,8 +6,26 @@ from core.turn import commit_user_turn, touch_activity
 from core.utils import word_count
 from core import store
 from core.tts import tts_interrupt, get_tts_started_ts
+from core.tts import tts_playing
 
-# Anti-phantom / finalize knobs
+# ---- First-turn arming (compat with live_voice_agent opener) ----
+_SEEDED_RMS = None
+
+def arm_first_turn(seed_rms: float | None = None):
+    global _SEEDED_RMS
+    _SEEDED_RMS = float(seed_rms) if (seed_rms and seed_rms > 0) else None
+
+def reset_first_turn():
+    global _SEEDED_RMS
+    _SEEDED_RMS = None
+
+def clear_audio_queue():
+    try:
+        audio_queue.clear()
+    except Exception:
+        pass
+
+# Anti-phantom / finalize knobs (stable, original)
 END_SILENCE_MS     = int(os.getenv("END_SILENCE_MS", "500"))
 CONTINUE_WINDOW_MS = int(os.getenv("CONTINUE_WINDOW_MS", "500"))
 PRE_ROLL_MS        = int(os.getenv("PRE_ROLL_MS", "100"))
@@ -32,7 +50,6 @@ MIN_VALID_CHARS      = int(os.getenv("MIN_VALID_CHARS","6"))
 BARGE_IN_TRIGGER_MS  = int(os.getenv("BARGE_IN_TRIGGER_MS","260"))
 BARGE_IN_MIN_RMS_MULT= float(os.getenv("BARGE_IN_MIN_RMS_MULT","2.2"))
 BARGE_IN_ECHO_MULT   = float(os.getenv("BARGE_IN_ECHO_MULT","2.5"))
-from core.tts import tts_playing
 
 DECODE = dict(
     language=os.getenv("LANGUAGE","en"),
@@ -84,6 +101,15 @@ def stt_worker(model: WhisperModel):
     cooldown_until = 0.0
 
     gate = EnergyGate()
+    # If the opener armed a baseline seed, apply it so first turn wakes quickly
+    try:
+        if _SEEDED_RMS:
+            try:
+                gate.seed(_SEEDED_RMS)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
     # Echo-aware barge-in
     barge_run = 0
@@ -125,12 +151,15 @@ def stt_worker(model: WhisperModel):
             energy_ok  = gate.loud_enough(frame)
             is_speech  = vad_speech and energy_ok
 
-            # Echo-aware barge-in:
+            # Echo-aware barge-in (gate RX while TTS plays unless clearly user)
             if tts_playing.is_set():
                 echo_rms = (float(os.getenv("ECHO_TRACK_DECAY","0.93")) * echo_rms) + ((1.0 - float(os.getenv("ECHO_TRACK_DECAY","0.93"))) * frame_rms)
                 loud_vs_ambient = frame_rms >= (gate.baseline or 0.0) * BARGE_IN_MIN_RMS_MULT
                 loud_vs_echo    = frame_rms >= max(1e-6, echo_rms) * float(os.getenv("BARGE_IN_ECHO_MULT","2.5"))
-                if is_speech and loud_vs_ambient and loud_vs_echo:
+                # If not clearly above ambient AND echo envelope, do not treat as speech
+                if not (loud_vs_ambient and loud_vs_echo):
+                    is_speech = False
+                if is_speech:
                     barge_run += 1
                 else:
                     barge_run = 0
@@ -219,5 +248,15 @@ def stt_worker(model: WhisperModel):
             print("⚠️ stt_worker loop error:", e)
 
 def run_audio_loop():
-    from core.audio import run_audio_loop as _run
-    _run(store.STOP)
+    # Choose AudioSocket vs mic by env
+    src = os.getenv("AUDIO_SOURCE", "mic").lower()
+    if src == "audiosocket":
+        from core.audio import run_audiosocket_loop
+        run_audiosocket_loop(store.STOP)
+    else:
+        from core.audio import run_audio_loop as _run
+        _run(store.STOP)
+
+
+
+
