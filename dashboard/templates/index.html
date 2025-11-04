@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="kpi">
+  <article>
+    <hgroup><h3>Total Leads</h3><p>{{ totals.leads_total }}</p></hgroup>
+  </article>
+  <article>
+    <hgroup><h3>Eligible Now</h3><p>{{ totals.eligible_now }}</p></hgroup>
+  </article>
+  <article>
+    <hgroup><h3>Completed</h3><p>{{ totals.completed_total }}</p></hgroup>
+  </article>
+  <article>
+    <hgroup><h3>Dialer</h3><p>{{ "ON" if dialer_enabled=="true" else "OFF" }}</p></hgroup>
+    <form method="post" action="/api/dialer/toggle">
+      <input type="hidden" name="enabled" value="{{ 'false' if dialer_enabled=='true' else 'true' }}">
+      <button>{{ "Stop" if dialer_enabled=="true" else "Start" }}</button>
+    </form>
+  </article>
+</section>
+
+<h3>Campaigns</h3>
+<table role="grid">
+  <thead><tr><th>Name</th><th>Leads</th><th>Ready</th><th>Completed</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for c in campaigns %}
+    <tr>
+      <td><a href="/campaigns/{{ c.id }}">{{ c.name }}</a>
+        {% if active_cid and active_cid|int == c.id %} <small>· active</small>{% endif %}
+      </td>
+      <td>{{ c.leads }}</td>
+      <td>{{ c.ready }}</td>
+      <td>{{ c.completed }}</td>
+      <td>
+        <form method="post" action="/api/campaigns/{{ c.id }}/activate" style="display:inline">
+          <button>Activate</button>
+        </form>
+        <form method="post" action="/api/campaigns/{{ c.id }}/pause" style="display:inline">
+          <button class="secondary">Pause</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

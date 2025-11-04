@@ -1,0 +1,22 @@
+INSERT INTO cities (city, state, tz_name) VALUES
+('Austin','Texas','America/Chicago'),
+('Charlotte','North Carolina','America/New_York'),
+('Chicago','Illinois','America/Chicago'),
+('Columbus','Ohio','America/New_York'),
+('Dallas','Texas','America/Chicago'),
+('Detroit','Michigan','America/Detroit'),
+('El Paso','Texas','America/Denver'),
+('Fort Worth','Texas','America/Chicago'),
+('Houston','Texas','America/Chicago'),
+('Indianapolis','Indiana','America/Indiana/Indianapolis'),
+('Jacksonville','Florida','America/New_York'),
+('Los Angeles','California','America/Los_Angeles'),
+('Memphis','Tennessee','America/Chicago'),
+('New York','New York','America/New_York'),
+('Philadelphia','Pennsylvania','America/New_York'),
+('Phoenix','Arizona','America/Phoenix'),
+('San Antonio','Texas','America/Chicago'),
+('San Diego','California','America/Los_Angeles'),
+('San Francisco','California','America/Los_Angeles'),
+('San Jose','California','America/Los_Angeles')
+ON CONFLICT DO NOTHING;

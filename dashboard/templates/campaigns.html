@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Campaigns</h3>
+<table role="grid">
+  <thead><tr><th>Name</th><th>Created</th><th>Leads</th><th>Ready</th><th>Completed</th><th></th></tr></thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.name }}</td>
+      <td>{{ r.created_at }}</td>
+      <td>{{ r.leads }}</td>
+      <td>{{ r.ready }}</td>
+      <td>{{ r.completed }}</td>
+      <td><a href="/campaigns/{{ r.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

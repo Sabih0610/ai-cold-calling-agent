@@ -1,0 +1,37 @@
+/* Layout */
+:root { --bg:#0b0b0b; --fg:#eaeaea; --muted:#b9b9b9; --panel:#141414; --ok:#19c37d; --warn:#e3b341; --bad:#ef4444; --info:#3b82f6; }
+html,body{background:var(--bg);color:var(--fg);}
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+.sidebar{background:var(--panel);padding:18px;border-right:1px solid #202020;}
+.sidebar .brand{margin:4px 0 16px 0}
+.sidebar ul{list-style:none;padding:0;margin:0}
+.sidebar li{margin:8px 0}
+.sidebar a{color:var(--fg);text-decoration:none}
+.sidebar a:hover{opacity:.85}
+.sidefoot{position:fixed;bottom:14px;}
+.content{padding:24px 28px}
+
+/* KPIs */
+.kpi{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.kpi article{min-width:180px;background:var(--panel);padding:12px;border-radius:8px;border:1px solid #202020}
+
+/* Tables & badges */
+table.leads td, table.leads th{white-space:nowrap}
+.badge{display:inline-block;padding:.15rem .45rem;border-radius:6px;font-size:.8rem;border:1px solid #2a2a2a;background:#161616}
+.badge.ok{background:rgba(25,195,125,.1);border-color:#1e6b52;color:#19c37d}
+.badge.dim{color:var(--muted)}
+.badge.new{color:#fff;background:#1a2433;border-color:#203049}
+.badge.in_progress{color:#fff;background:#1a2b1a;border-color:#224822}
+.badge.callback_due{background:#2a1f06;color:#f7d796;border-color:#40300b}
+.badge.completed{background:#112012;color:#9be5b9;border-color:#1d3a28}
+.badge.disp.answered{background:#142314;color:#a9e7b3;border-color:#1e3d20}
+.badge.disp.noanswer{background:#2a1a1a;color:#efb0b0;border-color:#3a2323}
+.badge.disp.busy{background:#2a1b09;color:#ffc493;border-color:#3a2a12}
+.badge.disp.failed{background:#300f11;color:#ff9aa7;border-color:#4a171a}
+.badge.disp.voicemail{background:#151d2a;color:#b9d5ff;border-color:#213253}
+.badge.disp.hangup{background:#221a22;color:#d9b6db;border-color:#352735}
+.badge.disp.oncall{background:#13212c;color:#b6e1ff;border-color:#1e3446}
+.badge.disp.deadcall{background:#2a1a1a;color:#efb0b0;border-color:#3a2323}
+
+/* Pagination */
+.pagination{display:flex;gap:.75rem;align-items:center;margin-top:.6rem}

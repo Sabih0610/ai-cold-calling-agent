@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Calls</h2>
+
+<form class="row" method="get" action="/calls">
+  <label>Campaign
+    <input type="number" name="campaign_id" value="{{ campaign_id or '' }}" min="1" style="max-width:8rem">
+  </label>
+  <label>Disposition
+    <select name="disposition">
+      <option value="all" {{ 'selected' if disposition=='all' else '' }}>All</option>
+      <option>ANSWERED</option>
+      <option>NOANSWER</option>
+      <option>BUSY</option>
+      <option>FAILED</option>
+      <option>VOICEMAIL</option>
+      <option>HANGUP</option>
+      <option>ONCALL</option>
+      <option>DEADCALL</option>
+    </select>
+  </label>
+  <label>Search
+    <input type="search" name="q" value="{{ q or '' }}" placeholder="company / phone">
+  </label>
+  <label>From <input type="datetime-local" name="date_from" value="{{ date_from or '' }}"></label>
+  <label>To <input type="datetime-local" name="date_to" value="{{ date_to or '' }}"></label>
+  <label>Size <input type="number" name="size" value="{{ size }}" min="5" max="200" style="max-width:7rem"></label>
+  <button class="secondary">Apply</button>
+</form>
+
+<table role="grid">
+  <thead>
+    <tr>
+      <th>Started</th><th>Lead</th><th>Phone</th>
+      <th>Disposition</th><th>Dur(s)</th><th>Recording</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.started_at }}</td>
+      <td>{{ r.company or r.lead_id }}</td>
+      <td>{{ r.phone_e164 }}</td>
+      <td><span class="badge disp {{ r.disposition|lower|replace(' ','_') }}">{{ r.disposition }}</span></td>
+      <td>{{ r.duration_sec or "" }}</td>
+      <td>{% if r.recording_url %}<a href="{{ r.recording_url }}" target="_blank">Play</a>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% set pages = ( (total + size - 1) // size ) %}
+<nav class="pagination">
+  {% if page > 1 %}
+    <a href="?page={{ page-1 }}&size={{ size }}&campaign_id={{ campaign_id or '' }}&disposition={{ disposition }}&q={{ q or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}" class="secondary">Prev</a>
+  {% endif %}
+  <span>Page {{ page }} / {{ pages or 1 }} ({{ total }} calls)</span>
+  {% if page < pages %}
+    <a href="?page={{ page+1 }}&size={{ size }}&campaign_id={{ campaign_id or '' }}&disposition={{ disposition }}&q={{ q or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}" class="secondary">Next</a>
+  {% endif %}
+</nav>
+{% endblock %}

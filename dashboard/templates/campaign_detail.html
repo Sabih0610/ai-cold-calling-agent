@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Campaign: {{ c.name }}</h2>
+
+<section class="kpi">
+  <article><hgroup><h4>Total</h4><p>{{ counts.total }}</p></hgroup></article>
+  <article><hgroup><h4>Ready</h4><p>{{ counts.ready }}</p></hgroup></article>
+  <article><hgroup><h4>New</h4><p>{{ counts.new }}</p></hgroup></article>
+  <article><hgroup><h4>In-Progress</h4><p>{{ counts.in_progress }}</p></hgroup></article>
+  <article><hgroup><h4>Callback Due</h4><p>{{ counts.callback_due }}</p></hgroup></article>
+  <article><hgroup><h4>Completed</h4><p>{{ counts.completed }}</p></hgroup></article>
+</section>
+
+<details open>
+  <summary><strong>Dialer Control</strong></summary>
+  <div class="row">
+    <form method="post" action="/api/campaigns/{{ c.id }}/activate"><button>Activate</button></form>
+    <form method="post" action="/api/campaigns/{{ c.id }}/pause"><button class="secondary">Pause</button></form>
+    <form method="post" action="/api/dialer/toggle">
+      <input type="hidden" name="enabled" value="{{ 'false' if dialer_enabled=='true' else 'true' }}">
+      <button>{{ "Stop Dialer" if dialer_enabled=="true" else "Start Dialer" }}</button>
+    </form>
+    <a href="/calls?campaign_id={{ c.id }}" role="button" class="contrast">Open Calls</a>
+    <a href="/export/leads.csv?campaign_id={{ c.id }}" role="button" class="secondary">Export Leads CSV</a>
+  </div>
+</details>
+
+<details open>
+  <summary><strong>Selection Rules</strong></summary>
+  <form method="post" action="/api/campaigns/{{ c.id }}/select" class="row">
+    <label><input type="radio" name="rule" value="all" checked> All</label>
+    <label><input type="radio" name="rule" value="odd"> Odd</label>
+    <label><input type="radio" name="rule" value="even"> Even</label>
+    <label><input type="radio" name="rule" value="every_n"> Every N <input type="number" name="every_n" min="2" value="5" style="max-width:6rem"></label>
+    <label><input type="radio" name="rule" value="start_middle"> Start middle</label>
+    <label><input type="radio" name="rule" value="offset_start"> Start from row <input type="number" name="offset_start" min="1" value="100" style="max-width:8rem"></label>
+    <button>Apply</button>
+  </form>
+  <form method="post" action="/api/campaigns/{{ c.id }}/requeue">
+    <button class="secondary">Requeue ready → NOW()</button>
+  </form>
+</details>
+
+<h3>Leads</h3>
+
+<form id="lead-filters" class="row"
+      hx-get="/campaigns/{{ c.id }}/leads"
+      hx-target="#leads-table"
+      hx-trigger="change, submit"
+      hx-push-url="false">
+  <input type="hidden" name="page" value="1">
+  <label>Status
+    <select name="status">
+      <option value="all">All</option>
+      <option>NEW</option>
+      <option>IN_PROGRESS</option>
+      <option>CALLBACK_DUE</option>
+      <option>COMPLETED</option>
+      <option value="READY">READY (callable)</option>
+    </select>
+  </label>
+  <label>Ready
+    <select name="ready">
+      <option value="all">All</option>
+      <option value="true">true</option>
+      <option value="false">false</option>
+    </select>
+  </label>
+  <label>Search
+    <input type="search" name="q" placeholder="company / email / phone">
+  </label>
+  <label>Sort
+    <select name="sort">
+      <option value="l.id">Lead ID</option>
+      <option value="l.company">Company</option>
+      <option value="cl.last_called_at DESC">Last Called</option>
+      <option value="cl.attempts DESC">Attempts</option>
+    </select>
+  </label>
+  <label>Page size
+    <input type="number" name="size" value="50" min="5" max="200" style="max-width:7rem">
+  </label>
+  <button class="secondary">Apply</button>
+</form>
+
+<div id="leads-table"
+     hx-get="/campaigns/{{ c.id }}/leads"
+     hx-trigger="load">
+  <!-- HTMX loads table here -->
+</div>
+{% endblock %}

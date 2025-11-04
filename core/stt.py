@@ -1,3 +1,4 @@
+#core\stt.py
 import os, time, collections, queue
 import numpy as np
 from faster_whisper import WhisperModel
