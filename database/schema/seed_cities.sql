@@ -1,3 +1,4 @@
+-- database\schema\seed_cities.sql 
 INSERT INTO cities (city, state, tz_name) VALUES
 ('Austin','Texas','America/Chicago'),
 ('Charlotte','North Carolina','America/New_York'),

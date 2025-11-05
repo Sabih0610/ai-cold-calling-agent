@@ -1,3 +1,4 @@
+#dashboard\app.py
 import os, io, csv
 from datetime import datetime
 from typing import Optional, List
@@ -14,8 +15,17 @@ DB_URL = os.getenv("DATABASE_URL", "postgresql://dialer:dialer@localhost:5432/di
 
 app = FastAPI(title="Dialer Dashboard")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(BASE_DIR)
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+# Serve call recordings stored under project data/recordings
+RECORDINGS_DIR = os.path.join(REPO_ROOT, "data", "recordings")
+try:
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
+except Exception:
+    pass
+app.mount("/recordings", StaticFiles(directory=RECORDINGS_DIR), name="recordings")
 
 PAGE_SIZE_DEFAULT = 50
 

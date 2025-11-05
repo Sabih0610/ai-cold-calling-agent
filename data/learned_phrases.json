@@ -3370,5 +3370,133 @@
   "i need this later i'm gonna need this": {
     "count": 1,
     "reply": "I understand you will need this information later. What is the best number to call you back then?"
+  },
+  "i can only repeat contact can i be run": {
+    "count": 1,
+    "reply": "I am not sure I understand your question. Could you please tell me your name?"
+  },
+  "i'm dalmatian the chief of staff by the time you run": {
+    "count": 1,
+    "reply": "Hi Dalmatian, it is great to connect with a Chief of Staff. Are you looking to automate any manual tasks for your team right now?"
+  },
+  "start_call": {
+    "count": 29,
+    "reply": "Hi Jordan, this is Cloumen calling for TestCo 1 in Austin. How are you doing today?"
+  },
+  "to report on the stand today": {
+    "count": 1,
+    "reply": "I am glad to hear you are checking in on things. Are you the right person to chat with about your current tech or website?"
+  },
+  "ah yeah im doing really good what about you": {
+    "count": 1,
+    "reply": "I am doing great, thanks for asking. Are you currently looking to improve your website or any of your business systems?"
+  },
+  "yeah i am doing really good what about you": {
+    "count": 1,
+    "reply": "I am doing well, thank you. Are you the main decision-maker for your company is technology or website projects?"
+  },
+  "yeah right now i am the main person you must definitely have the data about mine so what does your data say about who am i in this company": {
+    "count": 1,
+    "reply": "Our data shows you are the main contact for TestCo 1. What kind of tech challenges are you currently facing?"
+  },
+  "were on test code like we have mostly handles like operations and we have a lot of customers about": {
+    "count": 1,
+    "reply": "It sounds like you handle a lot of customer operations. Are those tasks mostly manual, or are you looking to automate some of them?"
+  },
+  "and right now the main issue is that our customer support is very big": {
+    "count": 1,
+    "reply": "A large customer support team can be challenging to manage. Would you be open to exploring how AI could help automate some of those tasks?"
+  },
+  "yeah i am looking to automatic": {
+    "count": 1,
+    "reply": "That is a great goal to have. Would you be available for a brief 15-minute call next week to explore some automation options?"
+  },
+  "no not right now": {
+    "count": 1,
+    "reply": "I understand you are busy right now. Could I send you a quick email with some information for the future?"
+  },
+  "yeah im doing really good im a little busy right now could we talk later": {
+    "count": 1,
+    "reply": "No problem, Jordan. what is the best email to send a quick follow-up?"
+  },
+  "oh its jordan at thewakeemallcom": {
+    "count": 1,
+    "reply": "Perfect, I will send a brief email to Jordan at thewakeemall.com. what is a good day next week for a quick 15-minute chat?"
+  },
+  "im getting the call right now": {
+    "count": 1,
+    "reply": "Great, thanks for taking my call. Are you the right person to chat with about your company is technology needs?"
+  },
+  "im good what about you": {
+    "count": 1,
+    "reply": "I am doing well, thank you for asking. What kind of tech challenges is your business facing right now?"
+  },
+  "were back for a minute": {
+    "count": 1,
+    "reply": "Hi Jordan, glad to catch you. Are you the right person to chat with about improving your website or tech tools?"
+  },
+  "were in for just a day": {
+    "count": 1,
+    "reply": "I understand you are only in for the day. Are you the right person to chat with about your current tech or website needs?"
+  },
+  "yeah im doing good": {
+    "count": 1,
+    "reply": "Great to hear, Jordan. Are you the right person to chat with about improving your tech or automation at TestCo?"
+  },
+  "turn it on": {
+    "count": 1,
+    "reply": "Hi Sam, this is Cloumen calling for TestCo 5 in Austin. How are things going today?"
+  },
+  "door thats locked on today": {
+    "count": 1,
+    "reply": "Hi Cameron, this is Cloumen calling for TestCo 10 in Austin. Are you the right person to chat with about your website or tech needs?"
+  },
+  "were back towards get day": {
+    "count": 1,
+    "reply": "Hi Jeff, this is Cloumen calling for Testco in Austin. How are you doing today?"
+  },
+  "for them to present today": {
+    "count": 1,
+    "reply": "Hi Sam, this is Cloumen calling for TestCo 5 in Austin. Are you the right person to chat with about your current tech setup?"
+  },
+  "jordan percenta": {
+    "count": 1,
+    "reply": "Hi Quinn, this is Cloumen calling for TestCo 7 in Austin. How are you doing today?"
+  },
+  "were going to start again": {
+    "count": 1,
+    "reply": "Hi Jordan, this is Cloumen calling for TestCo 1 in Austin. How are you doing today?"
+  },
+  "for next wednesday": {
+    "count": 1,
+    "reply": "Hi Riley, this is Cloumen calling for TestCo 3 in Austin. Are you the right person to chat with about your current tech setup?"
+  },
+  "by the exception of the": {
+    "count": 1,
+    "reply": "I am sorry, I did not quite catch that. How are things going at TestCo 3 today?"
+  },
+  "on a bus in 4check now": {
+    "count": 1,
+    "reply": "I understand you are busy. Can we schedule a quick 10-minute chat for later this week?"
+  },
+  "internet connection yeah im doing good so could you tell me something about myself hello hello": {
+    "count": 1,
+    "reply": "I can hear you clearly now, Jamie. Are you the right person to talk to about your technology needs?"
+  },
+  "uh yeah i am the right person": {
+    "count": 1,
+    "reply": "Great. Are you currently facing any challenges with manual tasks or scheduling in your business?"
+  },
+  "yeah but do you know what kind of business i do": {
+    "count": 1,
+    "reply": "Yes, you run TestCo 9 in Austin. What kind of manual tasks are taking up your team is time right now?"
+  },
+  "for the grand prix wednesday": {
+    "count": 1,
+    "reply": "Great, I hope you enjoy the Grand Prix on Wednesday. Are you the right person to chat with about your business technology needs?"
+  },
+  "i didnt get it i didnt get it": {
+    "count": 1,
+    "reply": "I am calling from Cloumen to see if you are exploring ways to grow your business. Are you open to a quick chat?"
   }
 }

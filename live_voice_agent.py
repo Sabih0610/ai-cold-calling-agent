@@ -3,13 +3,14 @@ Tiny runner that boots engines, wires modules, and exposes a Runner singleton
 (other modules or api.py can import and control it).
 """
 #live_voice_agent.py
-import os, time, threading, signal
+import os, time, threading, signal, json, queue
 from dotenv import load_dotenv
 
 # Load env first so submodules see flags
 load_dotenv()
 
 from core import store, stt, tts, llm, turn
+from core import lead_context
 
 # Telephony latch & helpers (PBX build). In local mode these fall back.
 try:
@@ -84,16 +85,46 @@ class Runner:
             except Exception:
                 pass
 
-            # Build opener at the last moment
-            opener = (self._flow.opener() if self._flow else None) or llm.default_opener()
+            # Build per-call context at the last moment (read dialer pointer)
             try:
-                print("[Opener] Bridge detected. Speaking opener...")
-                store.conv.append("assistant", opener)
-                store.enqueue_turn("assistant", opener)
+                ctx_dir = os.getenv("CTX_DIR", "/var/tmp/dialer_ctx")
+                next_path = os.path.join(ctx_dir, "next.json")
+                lead_payload = None
+                lead_id = campaign_id = None
+                if os.path.exists(next_path):
+                    with open(next_path, "r", encoding="utf-8") as f:
+                        ptr = json.load(f)
+                    context_path = ptr.get("context_path")
+                    lead_id = ptr.get("lead_id")
+                    campaign_id = ptr.get("campaign_id")
+                    if context_path and os.path.exists(context_path):
+                        with open(context_path, "r", encoding="utf-8") as f:
+                            lead_payload = json.load(f)
+                if lead_payload and lead_payload.get("lead_full_raw"):
+                    lead_context.set_current_lead(lead_payload.get("lead_full_raw"))
+                    # Rotate conversation + session per call
+                    try: store.close_session()
+                    except Exception: pass
+                    try:
+                        store.new_conversation(key=f"{campaign_id or 'x'}_{lead_id or 'y'}_{int(time.time())}")
+                    except Exception:
+                        pass
+                    try: store.open_new_session()
+                    except Exception: pass
 
-                # STT is already armed (short trigger for first user turn)
-                tts.speak(opener)  # async or blocking depending on your TTS
-                print("[Opener] TTS.speak() returned.")
+                    # Install providers to include lead context + flow hint
+                    agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
+                    flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
+                    def _context_provider():
+                        return lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
+                    llm.set_providers(_context_provider, (self._flow.hint if self._flow else None))
+            except Exception as e:
+                print(f"[Opener] Context wiring error: {e}")
+            try:
+                print("[Opener] Bridge detected. Generating opener via LLM...")
+                # STT is already armed; ask LLM for a short opener grounded in lead
+                llm.deepseek_stream_and_speak("[START_CALL]")
+                print("[Opener] LLM opener sent.")
             except Exception as e:
                 print(f"[Opener] ERROR while speaking opener: {e}")
             finally:
@@ -105,6 +136,20 @@ class Runner:
                 time.sleep(0.05)
 
             print("[Opener] Call ended. Waiting for the next call...")
+            try:
+                tts.tts_interrupt()
+            except Exception:
+                pass
+            try:
+                while True:
+                    item = llm.llm_queue.get_nowait()
+                    llm.llm_queue.task_done()
+            except queue.Empty:
+                pass
+            try:
+                llm._first_turn_done = False
+            except Exception:
+                pass
 
     def start(self, agent_id: str | None = None, use_script_opener: bool = True):
         if self._running:
@@ -153,9 +198,27 @@ class Runner:
             # Local (non-PBX) mode: small settle, arm/seed, then speak
             time.sleep(0.2)
             stt.arm_first_turn(seed_rms=0.0032)
-            opener = (self._flow.opener() if self._flow else None) or llm.default_opener()
-            store.conv.append("assistant", opener); store.enqueue_turn("assistant", opener)
-            _speak(opener)
+            # Try to build per-call context if dialer pointer exists, then generate LLM opener
+            try:
+                ctx_dir = os.getenv("CTX_DIR", "/var/tmp/dialer_ctx")
+                next_path = os.path.join(ctx_dir, "next.json")
+                if os.path.exists(next_path):
+                    with open(next_path, "r", encoding="utf-8") as f:
+                        ptr = json.load(f)
+                    context_path = ptr.get("context_path")
+                    if context_path and os.path.exists(context_path):
+                        with open(context_path, "r", encoding="utf-8") as f:
+                            lead_payload = json.load(f)
+                        if lead_payload.get("lead_full_raw"):
+                            lead_context.set_current_lead(lead_payload.get("lead_full_raw"))
+                            store.new_conversation(f"local_{int(time.time())}")
+                            store.open_new_session()
+                            agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
+                            flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
+                            llm.set_providers(lambda: lead_context.build_context(agent_ctx, flow_titles), (self._flow.hint if self._flow else None))
+            except Exception:
+                pass
+            llm.deepseek_stream_and_speak("[START_CALL]")
 
     def stop(self, reason="manual"):
         if not self._running: return

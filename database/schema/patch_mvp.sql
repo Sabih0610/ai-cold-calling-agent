@@ -1,3 +1,4 @@
+-- database\schema\patch_mvp.sql 
 -- === CONFIG (simple K/V) ===
 CREATE TABLE IF NOT EXISTS config (
   key   text PRIMARY KEY,

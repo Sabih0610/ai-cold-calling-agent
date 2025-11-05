@@ -1,4 +1,5 @@
 -- Create UNIQUE(phone_e164) named exactly as import_all.py expects
+-- database\schema\patch_mvp_fix_constraints.sql
 DO $$
 BEGIN
   IF NOT EXISTS (

@@ -1,3 +1,4 @@
+/*dashboard\static\main.css*/
 /* Layout */
 :root { --bg:#0b0b0b; --fg:#eaeaea; --muted:#b9b9b9; --panel:#141414; --ok:#19c37d; --warn:#e3b341; --bad:#ef4444; --info:#3b82f6; }
 html,body{background:var(--bg);color:var(--fg);}

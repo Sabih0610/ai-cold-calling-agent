@@ -1,6 +1,7 @@
 #core\llm.py
 import os, time, hashlib, threading, queue
 from typing import Optional, Callable
+import hashlib
 from openai import OpenAI
 from rapidfuzz import fuzz
 from core.prompts import SYSTEM_PROMPT
@@ -27,6 +28,8 @@ STREAM_BUFFER_FLUSH_CHARS = int(os.getenv("STREAM_BUFFER_FLUSH_CHARS","0"))
 
 _context_provider: Callable[[], str] = lambda: ""
 _hint_provider: Callable[[], str] = lambda: ""
+
+SPECIAL_COMMANDS = {"start_call"}
 
 # ===============================================================
 # Providers Setup
@@ -103,6 +106,44 @@ def _end_call_checks(plow: str, original_text: str) -> Optional[str]:
     return None
 
 # ===============================================================
+# Memory lookup (static/learned + optional fuzzy)
+# ===============================================================
+def _best_memory_match(norm: str) -> Optional[str]:
+    """Return a reply from STATIC or LEARNED if we have it (exact or fuzzy)."""
+    # Exact first
+    if norm in store.STATIC_RESPONSES:
+        return store.STATIC_RESPONSES[norm]
+    if norm in store.LEARNED_PHRASES:
+        rec = store.LEARNED_PHRASES.get(norm) or {}
+        if rec.get("reply"):
+            return rec["reply"]
+
+    # Optional fuzzy fallback
+    try:
+        thresh = int(os.getenv("LLM_MEMORY_FUZZY_SIM", "0"))
+    except Exception:
+        thresh = 0
+    if thresh <= 0:
+        return None
+
+    best = (None, 0, None)  # (key, score, reply)
+    try:
+        for k, v in store.STATIC_RESPONSES.items():
+            s = fuzz.ratio(k, norm)
+            if s > best[1]:
+                best = (k, s, v)
+        for k, rec in store.LEARNED_PHRASES.items():
+            rep = (rec or {}).get("reply")
+            if not rep:
+                continue
+            s = fuzz.ratio(k, norm)
+            if s > best[1]:
+                best = (k, s, rep)
+    except Exception:
+        return None
+    return best[2] if best[1] >= thresh else None
+
+# ===============================================================
 # Conversation Helpers
 # ===============================================================
 def default_opener():
@@ -112,13 +153,23 @@ def default_opener():
 def _assemble_messages():
     msgs = [{"role":"system","content":SYSTEM_PROMPT}, *store.conv.load()]
     context = (_context_provider() or "").strip()
-    context_key = f"ctxsent:{store.conv.key}"
-    try: already = rds.get(context_key)
-    except Exception: already = None
-    if context and not already:
-        msgs.append({"role":"user","content":"[SCRIPT CONTEXT]\n"+context})
-        try: rds.setex(context_key, 3600, "1")
-        except Exception: pass
+    # Send context once per unique context blob (new lead ⇒ new hash).
+    if context:
+        h = hashlib.sha256(context.encode("utf-8")).hexdigest()
+        # Ensure per-conversation context injection: include conv key
+        try:
+            conv_key = getattr(store.conv, "key", "conv")
+        except Exception:
+            conv_key = "conv"
+        context_key = f"ctxsent:{conv_key}:{h}"
+        try: already = rds.get(context_key)
+        except Exception: already = None
+        if not already:
+            msgs.append({"role":"user","content":context})
+            try: rds.setex(context_key, 3600, "1")
+            except Exception: pass
+
+        
     hint = (_hint_provider() or "").strip()
     if hint:
         msgs.append({"role":"user","content":"[FLOW HINT]\n"+hint})
@@ -129,6 +180,7 @@ def _assemble_messages():
 # ===============================================================
 def deepseek_reply(prompt: str) -> str:
     norm = normalize_text(prompt)
+    is_command = norm in SPECIAL_COMMANDS
     store.conv.append("user", prompt); store.enqueue_turn("user", prompt)
     plow = prompt.lower()
 
@@ -142,14 +194,27 @@ def deepseek_reply(prompt: str) -> str:
     g = guards.price_guard(prompt)
     if g: return g
 
-    cache_key = hashlib.sha256(norm.encode()).hexdigest()
+    # Memory first: static/learned, then cache, then LLM
+    if not is_command:
+        mem = _best_memory_match(norm)
+        if mem:
+            reply = shape_for_tts(mem)
+            store.conv.append("assistant", reply)
+            store.enqueue_turn("assistant", reply)
+            store.enqueue_learn_async(norm, reply)
+            speak(reply)
+            return reply
+
+    conv_key = getattr(store.conv, "key", "conv")
+    cache_key = hashlib.sha256(f"{conv_key}|{norm}".encode()).hexdigest()
     try: cached = rds.get(cache_key)
     except Exception: cached = None
     if cached:
         reply = shape_for_tts(cached)
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         speak(reply)
         return reply
 
@@ -157,7 +222,8 @@ def deepseek_reply(prompt: str) -> str:
         reply = shape_for_tts("Sorry, my brain isn’t online right now. Could we try again shortly?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         speak(reply)
         return reply
 
@@ -177,7 +243,8 @@ def deepseek_reply(prompt: str) -> str:
         except Exception: pass
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         speak(reply)
         return reply
     except Exception as e:
@@ -185,7 +252,8 @@ def deepseek_reply(prompt: str) -> str:
         reply = shape_for_tts("I’m having a connection issue. Can we try again in a moment?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         speak(reply)
         return reply
 
@@ -194,6 +262,7 @@ def deepseek_reply(prompt: str) -> str:
 # ===============================================================
 def deepseek_stream_and_speak(prompt: str) -> str:
     norm = normalize_text(prompt)
+    is_command = norm in SPECIAL_COMMANDS
     store.conv.append("user", prompt); store.enqueue_turn("user", prompt)
 
     plow = prompt.lower()
@@ -207,23 +276,30 @@ def deepseek_stream_and_speak(prompt: str) -> str:
     g = guards.price_guard(prompt)
     if g: return g
 
-    cache_key = hashlib.sha256(norm.encode()).hexdigest()
+    # Memory first: static/learned, then cache, then LLM
+    if not is_command:
+        mem = _best_memory_match(norm)
+        if mem:
+            reply = shape_for_tts(mem)
+            store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+            store.enqueue_learn_async(norm, reply); speak(reply); return reply
+    conv_key = getattr(store.conv, "key", "conv")
+    cache_key = hashlib.sha256(f"{conv_key}|{norm}".encode()).hexdigest()
     try: cached = rds.get(cache_key)
     except Exception: cached = None
-
-    if norm in store.STATIC_RESPONSES:
-        reply = shape_for_tts(store.STATIC_RESPONSES[norm])
-        store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply); speak(reply); return reply
     if cached:
         reply = shape_for_tts(cached)
         store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply); speak(reply); return reply
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
+        speak(reply); return reply
 
     if not client:
         reply = shape_for_tts("Sorry, my brain isn’t online right now. Could we try again shortly?")
         store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply); speak(reply); return reply
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
+        speak(reply); return reply
 
     messages = _assemble_messages()
     try:
@@ -309,7 +385,8 @@ def deepseek_stream_and_speak(prompt: str) -> str:
         except Exception: pass
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         return reply
 
     except Exception as e:
@@ -317,7 +394,8 @@ def deepseek_stream_and_speak(prompt: str) -> str:
         reply = shape_for_tts("I’m having a connection issue. Can we try again in a moment?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
-        store.enqueue_learn_async(norm, reply)
+        if not is_command:
+            store.enqueue_learn_async(norm, reply)
         speak(reply)
         return reply
 

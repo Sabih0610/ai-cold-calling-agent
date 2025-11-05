@@ -20,7 +20,17 @@ def load_json(path):
     return {}
 
 def normalize_text(text: str) -> str:
-    return (text or "").lower().strip().translate(str.maketrans("", "", ".,?!"))
+    """Aggressive normalization for memory/cache keys.
+    Lowercase, strip common punctuation, collapse whitespace.
+    """
+    s = (text or "").lower()
+    # Remove a wider set of punctuation
+    remove = ".,?!:;\"'()[]{}<>-—–/\\|"
+    s = s.translate(str.maketrans("", "", remove))
+    # Collapse whitespace
+    import re
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 _WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
 def word_count(s: str) -> int:

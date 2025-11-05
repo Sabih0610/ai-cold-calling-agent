@@ -20,3 +20,7 @@ Thumbs.db
 
 # Voice models
 voices/
+
+# Large files
+asterik/wsl/images/*.tar.gz
+asterik/wsl/images/*.rootfs.tar.gz

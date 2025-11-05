@@ -1,9 +1,10 @@
+<!--dashboard\templates\campaign_leads.html-->
 <table role="grid" class="leads">
   <thead>
     <tr>
       <th>ID</th><th>Company</th><th>Phone</th><th>Email</th>
       <th>City/State</th><th>Status</th><th>Ready</th>
-      <th>Attempts</th><th>Last Call</th><th>Last Result</th><th></th>
+      <th>Attempts</th><th>Last Call</th><th>Last Result</th><th>Recording</th><th></th>
     </tr>
   </thead>
   <tbody>
@@ -29,6 +30,11 @@
       <td>
         {% if r.disposition %}
           <span class="badge disp {{ r.disposition|lower|replace(' ','_') }}">{{ r.disposition }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.recording_url %}
+          <a href="{{ r.recording_url }}" target="_blank">Play</a>
         {% endif %}
       </td>
       <td>

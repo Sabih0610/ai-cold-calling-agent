@@ -200,3 +200,39 @@ events = queue.Queue()
 def publish_event(ev: dict):
     try: events.put_nowait(ev)
     except Exception: pass
+
+# ---------------- Convenience helpers for call-scoped rotation ----------------
+def new_conversation(key: str | None = None):
+    """Rotate to a fresh Redis conversation list (per call)."""
+    global conv
+    conv = Conversation(key=key)
+
+def close_session():
+    """Signal IO worker to close the current session (sets ended_at, persists)."""
+    try:
+        io_queue.put({"type": "close_session"})
+    except Exception:
+        pass
+
+def open_new_session():
+    """Start a new session in-memory; next IO events will persist under a new file."""
+    try:
+        IO.session_id = uuid.uuid4().hex[:12]
+        IO.session = {
+            "session_id": IO.session_id,
+            "started_at": utcnow_iso(),
+            "ended_at": None,
+            "turns": []
+        }
+        IO.session_path = None
+        _write_session_file()
+    except Exception:
+        pass
+
+__all__ = [
+    "rds", "STOP", "set_stop", "events", "publish_event",
+    "Conversation", "conv", "new_conversation",
+    "enqueue_turn", "enqueue_identify",
+    "STATIC_RESPONSES", "LEARNED_PHRASES", "enqueue_learn_async",
+    "close_session", "open_new_session",
+]
