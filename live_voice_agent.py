@@ -44,11 +44,124 @@ class Runner:
         self._flow = None
         self._voice = None
         self._model = None
+        self._prepared_lock = threading.Lock()
+        self._prepared_cache: dict[tuple[int, int], dict] = {}
+        self._ctx_dir = os.getenv("CTX_DIR") or os.path.join(os.getcwd(), "data", "ctx")
+        self._ctx_dir = os.path.abspath(self._ctx_dir)
+        self._prepared_dir = os.path.join(self._ctx_dir, "prepared")
+        try:
+            os.makedirs(self._prepared_dir, exist_ok=True)
+        except Exception:
+            pass
 
     @property
     def running(self): return self._running
     @property
     def active_agent(self): return self._active_agent
+
+    def prepare_call(self, campaign_id: int, lead_payload: dict, context_path: str | None = None) -> dict:
+        """
+        Precompute an opener so we can start speaking the moment the bridge is ready.
+        """
+        if not self._active_agent:
+            return {"status": "skipped", "reason": "no-active-agent"}
+        lead_payload = dict(lead_payload or {})
+        lead_raw = dict(lead_payload.get("lead_full_raw") or {})
+        if not lead_raw:
+            return {"status": "skipped", "reason": "missing-lead"}
+        try:
+            try:
+                campaign_id = int(campaign_id)
+            except Exception:
+                pass
+            base_dir = self._ctx_dir
+            if context_path:
+                try:
+                    base_dir = os.path.dirname(os.path.abspath(context_path))
+                except Exception:
+                    pass
+            prepared_dir = os.path.join(base_dir, "prepared")
+            try:
+                os.makedirs(prepared_dir, exist_ok=True)
+            except Exception:
+                pass
+            campaign_row = dict(lead_payload.get("campaign_raw") or {})
+            lead_context.set_current_lead(lead_raw, campaign_row=campaign_row)
+            agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
+            flow_titles = [s.get("title", "") for s in (self._flow.sections if self._flow else [])]
+            hint_text = self._flow.hint if self._flow else ""
+            context_text = lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
+            opener_text = llm.generate_opener(context_text, hint_text)
+            pcm_bytes = tts.synthesize_to_pcm16(opener_text)
+            lead_key_val = lead_payload.get("lead_id") or lead_raw.get("id")
+            try:
+                lead_key_val = int(lead_key_val)
+            except Exception:
+                pass
+            pcm_path = ""
+            text_path = ""
+            if pcm_bytes:
+                try:
+                    pcm_path = os.path.join(
+                        prepared_dir,
+                        f"opener_{campaign_id}_{lead_key_val}.pcm",
+                    )
+                    with open(pcm_path, "wb") as f:
+                        f.write(pcm_bytes)
+                    text_path = os.path.join(
+                        prepared_dir,
+                        f"opener_{campaign_id}_{lead_key_val}.json",
+                    )
+                    with open(text_path, "w", encoding="utf-8") as tf:
+                        json.dump(
+                            {
+                                "opener": opener_text,
+                                "context": context_text,
+                                "hint": hint_text,
+                                "ts": time.time(),
+                            },
+                            tf,
+                            ensure_ascii=False,
+                        )
+                except Exception as exc:
+                    print(f"[Prewarm] Failed to persist PCM: {exc}")
+                    pcm_path = ""
+                    text_path = ""
+            prepared = {
+                "campaign_id": campaign_id,
+                "lead_id": lead_key_val,
+                "context": context_text,
+                "hint": hint_text,
+                "opener": opener_text,
+                "pcm": pcm_bytes,
+                "pcm_path": pcm_path,
+                "meta_path": text_path,
+                "ts": time.time(),
+            }
+            ttl = float(os.getenv("PREPARED_OPENER_TTL", "180"))
+            with self._prepared_lock:
+                # purge expired entries
+                expired = []
+                for key, entry in self._prepared_cache.items():
+                    if (time.time() - entry.get("ts", 0)) > ttl:
+                        expired.append(key)
+                for key in expired:
+                    self._prepared_cache.pop(key, None)
+                try:
+                    lead_key = (int(prepared["campaign_id"]), int(prepared["lead_id"]))
+                except Exception:
+                    lead_key = (prepared["campaign_id"], prepared["lead_id"])
+                self._prepared_cache[lead_key] = prepared
+            if os.getenv("PREPARED_DEBUG", "0") == "1":
+                print(f"[Prewarm] Prepared opener campaign={campaign_id} lead={lead_key_val} pcm_bytes={len(pcm_bytes)} path={pcm_path or 'inline'}")
+            return {
+                "status": "prepared",
+                "opener": opener_text,
+                "pcm_bytes": len(pcm_bytes),
+                "pcm_path": pcm_path,
+            }
+        except Exception as exc:
+            return {"status": "error", "reason": str(exc)}
 
     # ---------------------------------------------
     # Opener loop: say opener on bridge; PRE-ARM STT (mutes while TTS plays)
@@ -101,7 +214,15 @@ class Runner:
                         with open(context_path, "r", encoding="utf-8") as f:
                             lead_payload = json.load(f)
                 if lead_payload and lead_payload.get("lead_full_raw"):
-                    lead_context.set_current_lead(lead_payload.get("lead_full_raw"))
+                    try:
+                        campaign_id = int(campaign_id)
+                    except Exception:
+                        pass
+                    try:
+                        lead_id = int(lead_id)
+                    except Exception:
+                        pass
+                    lead_context.set_current_lead(lead_payload.get("lead_full_raw"), campaign_row=lead_payload.get("campaign_raw"))
                     # Rotate conversation + session per call
                     try: store.close_session()
                     except Exception: pass
@@ -121,10 +242,126 @@ class Runner:
             except Exception as e:
                 print(f"[Opener] Context wiring error: {e}")
             try:
-                print("[Opener] Bridge detected. Generating opener via LLM...")
-                # STT is already armed; ask LLM for a short opener grounded in lead
-                llm.deepseek_stream_and_speak("[START_CALL]")
-                print("[Opener] LLM opener sent.")
+                agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
+                flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
+                context_text = lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
+                hint_text = self._flow.hint if self._flow else ""
+                prepared_entry = None
+                ttl = float(os.getenv("PREPARED_OPENER_TTL", "180"))
+                with self._prepared_lock:
+                    # purge expired
+                    expired = []
+                    now_ts = time.time()
+                    for key, entry in self._prepared_cache.items():
+                        if (now_ts - entry.get("ts", 0)) > ttl:
+                            expired.append(key)
+                    for key in expired:
+                        self._prepared_cache.pop(key, None)
+                    lead_key = (campaign_id, lead_id)
+                    prepared_entry = self._prepared_cache.pop(lead_key, None)
+                    if not prepared_entry and os.getenv("PREPARED_DEBUG", "0") == "1":
+                        print(f"[Opener] Cache miss for campaign={campaign_id} lead={lead_id}; cached keys={list(self._prepared_cache.keys())}")
+
+                if prepared_entry:
+                    print("[Opener] Bridge detected. Using prepared opener.")
+                    opener_text = prepared_entry.get("opener") or llm.default_opener()
+                    try:
+                        store.conv.append("user", "[START_CALL]")
+                        store.enqueue_turn("user", "[START_CALL]")
+                    except Exception:
+                        pass
+                    store.conv.append("assistant", opener_text)
+                    store.enqueue_turn("assistant", opener_text)
+                    store.publish_event({"type": "assistant_turn", "text": opener_text})
+                    turn.touch_activity()
+                    pcm_path = prepared_entry.get("pcm_path") or ""
+                    meta_path = prepared_entry.get("meta_path") or ""
+                    pcm_bytes = b""
+                    if pcm_path and os.path.exists(pcm_path):
+                        try:
+                            with open(pcm_path, "rb") as f:
+                                pcm_bytes = f.read()
+                        except Exception as exc:
+                            print(f"[Opener] Failed to read prepared PCM: {exc}")
+                        try:
+                            os.remove(pcm_path)
+                        except Exception:
+                            pass
+                    if not pcm_bytes:
+                        pcm_bytes = prepared_entry.get("pcm") or b""
+                    if meta_path and os.path.exists(meta_path):
+                        try:
+                            os.remove(meta_path)
+                        except Exception:
+                            pass
+                    if pcm_bytes:
+                        tts.play_pcm16_buffer(pcm_bytes)
+                    else:
+                        _speak(opener_text)
+                    try:
+                        llm._first_turn_done = True
+                    except Exception:
+                        pass
+                    print("[Opener] Prepared opener sent.")
+                else:
+                    disk_pcm_path = os.path.join(
+                        self._prepared_dir,
+                        f"opener_{campaign_id}_{lead_id}.pcm"
+                    )
+                    disk_meta_path = os.path.join(
+                        self._prepared_dir,
+                        f"opener_{campaign_id}_{lead_id}.json"
+                    )
+                    disk_pcm_bytes = b""
+                    if os.path.exists(disk_pcm_path):
+                        try:
+                            with open(disk_pcm_path, "rb") as f:
+                                disk_pcm_bytes = f.read()
+                            opener_text = None
+                            if os.path.exists(disk_meta_path):
+                                try:
+                                    with open(disk_meta_path, "r", encoding="utf-8") as tf:
+                                        meta = json.load(tf)
+                                    opener_text = meta.get("opener")
+                                except Exception as exc:
+                                    print(f"[Opener] Failed to read opener metadata: {exc}")
+                            if not opener_text:
+                                opener_text = llm.default_opener()
+                            print("[Opener] Bridge detected. Using disk-prepared opener.")
+                            try:
+                                store.conv.append("user", "[START_CALL]")
+                                store.enqueue_turn("user", "[START_CALL]")
+                            except Exception:
+                                pass
+                            store.conv.append("assistant", opener_text)
+                            store.enqueue_turn("assistant", opener_text)
+                            store.publish_event({"type": "assistant_turn", "text": opener_text})
+                            turn.touch_activity()
+                            tts.play_pcm16_buffer(disk_pcm_bytes)
+                            try:
+                                os.remove(disk_pcm_path)
+                            except Exception:
+                                pass
+                            try:
+                                if os.path.exists(disk_meta_path):
+                                    os.remove(disk_meta_path)
+                            except Exception:
+                                pass
+                            try:
+                                llm._first_turn_done = True
+                            except Exception:
+                                pass
+                            print("[Opener] Disk-prepared opener sent.")
+                            continue
+                        except Exception as exc:
+                            print(f"[Opener] Failed to use disk opener: {exc}")
+                    if os.getenv("PREPARED_DEBUG", "0") == "1":
+                        print(f"[Opener] Prepared opener missing for campaign={campaign_id} lead={lead_id}; falling back to live generation.")
+                    print("[Opener] Bridge detected. Generating opener via LLM...")
+                    # STT is already armed; ask LLM for a short opener grounded in lead
+                    llm.deepseek_stream_and_speak("[START_CALL]")
+                    turn.touch_activity()
+                    print("[Opener] LLM opener sent.")
             except Exception as e:
                 print(f"[Opener] ERROR while speaking opener: {e}")
             finally:
@@ -136,6 +373,7 @@ class Runner:
                 time.sleep(0.05)
 
             print("[Opener] Call ended. Waiting for the next call...")
+            turn.touch_activity()
             try:
                 tts.tts_interrupt()
             except Exception:
@@ -210,7 +448,7 @@ class Runner:
                         with open(context_path, "r", encoding="utf-8") as f:
                             lead_payload = json.load(f)
                         if lead_payload.get("lead_full_raw"):
-                            lead_context.set_current_lead(lead_payload.get("lead_full_raw"))
+                            lead_context.set_current_lead(lead_payload.get("lead_full_raw"), campaign_row=lead_payload.get("campaign_raw"))
                             store.new_conversation(f"local_{int(time.time())}")
                             store.open_new_session()
                             agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
@@ -276,3 +514,5 @@ if __name__ == "__main__":
             time.sleep(0.2)
     finally:
         runner.stop("main_exit")
+
+

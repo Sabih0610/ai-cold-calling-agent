@@ -33,11 +33,19 @@
       <td>{{ c.ready }}</td>
       <td>{{ c.completed }}</td>
       <td>
-        <form method="post" action="/api/campaigns/{{ c.id }}/activate" style="display:inline">
-          <button>Activate</button>
+        <form
+          hx-post="/api/campaigns/{{ c.id }}/activate"
+          hx-swap="none"
+          hx-on="htmx:afterRequest: window.location.reload()"
+          style="display:inline">
+          <button type="submit">Activate</button>
         </form>
-        <form method="post" action="/api/campaigns/{{ c.id }}/pause" style="display:inline">
-          <button class="secondary">Pause</button>
+        <form
+          hx-post="/api/campaigns/{{ c.id }}/stop"
+          hx-swap="none"
+          hx-on="htmx:afterRequest: window.location.reload()"
+          style="display:inline">
+          <button type="submit" class="secondary">Stop</button>
         </form>
       </td>
     </tr>

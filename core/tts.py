@@ -1,11 +1,11 @@
 # core/tts.py
-import os, time, json, shutil, subprocess, threading
+import os, time, json, shutil, subprocess, threading, tempfile
 import sounddevice as sd
 from core.utils import to_speakable, set_user_identity_async
 from core import store
 
 # === NEW: AudioSocket sink helpers ===
-from core.audio import send_tts_pcm16_16k, audiosocket_ready, resample_int16_mono
+from core.audio import send_tts_pcm16_16k, audiosocket_ready, resample_int16_mono, FRAME_SIZE, FRAME_DURATION
 
 # ===============================================================
 # Piper Configuration
@@ -287,6 +287,114 @@ def use_voice(voice_entry: dict):
     model = voice_entry.get("model")
     config = voice_entry.get("config")
     _engine.restart(model_path=model, config_path=config)
+
+def _current_voice_paths():
+    model = getattr(_engine, "_model_path", None)
+    config = getattr(_engine, "_config_path", None)
+    if not (model and config):
+        model, config = _select_voice_paths(PIPER_VOICE_SELECT)
+    return model, config
+
+def synthesize_to_pcm16(text: str) -> bytes:
+    """Generate 16 kHz PCM bytes for the given text using Piper CLI."""
+    s = to_speakable(text)
+    if not s:
+        return b""
+    model_path, config_path = _current_voice_paths()
+    if not (shutil.which(PIPER_EXE) and os.path.exists(model_path) and os.path.exists(config_path)):
+        return b""
+
+    sr = _load_voice_sr(config_path)
+    ls, ns, nw = _derive_params(s)
+    output_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8", suffix=".txt") as tf:
+            tf.write(s)
+            text_path = tf.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".raw") as of:
+            output_path = of.name
+        args = [
+            PIPER_EXE,
+            "--model", model_path,
+            "--config", config_path,
+            "--input_text", text_path,
+            "--output_raw",
+            "--output_file", output_path,
+            "--length-scale", f"{ls}",
+            "--noise-scale", f"{ns}",
+            "--noise-w", f"{nw}",
+        ]
+        if PIPER_USE_CUDA:
+            args.append("--cuda")
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(f"⚠️ Piper synth failed ({result.returncode}): {result.stderr.decode(errors='ignore')}")
+            return b""
+        try:
+            with open(output_path, "rb") as f:
+                raw = f.read()
+        except Exception as read_exc:
+            print(f"⚠️ Piper synth read error: {read_exc}")
+            raw = b""
+        if not raw:
+            err_text = (result.stderr or b"").decode(errors="ignore").strip()
+            if err_text:
+                print(f"⚠️ Piper synth produced no data. STDERR: {err_text}")
+            return b""
+        if sr != 16000:
+            return resample_int16_mono(raw, sr, 16000)
+        return raw
+    except Exception as exc:
+        print(f"⚠️ Piper synth exception: {exc}")
+        return b""
+    finally:
+        try:
+            if 'text_path' in locals():
+                os.unlink(text_path)
+            if output_path:
+                os.unlink(output_path)
+        except Exception:
+            pass
+
+def play_pcm16_buffer(pcm_bytes: bytes):
+    """Stream pre-generated PCM16 (16 kHz) to the current audio sink."""
+    if not pcm_bytes:
+        return
+    frame_bytes = FRAME_SIZE * 2
+    if AUDIO_SINK in ("audiosocket", "both"):
+        audiosocket_ready.wait(timeout=0.75)
+    total = len(pcm_bytes)
+    idx = 0
+    global _tts_started_at
+    _tts_started_at = time.time()
+    tts_playing.set()
+    try:
+        store.publish_event({"type": "state", "name": "tts_playing", "value": True})
+    except Exception:
+        pass
+    start = time.perf_counter()
+    frame_dur = FRAME_DURATION / 1000.0
+    frame_idx = 0
+    while idx < total:
+        chunk = pcm_bytes[idx:idx + frame_bytes]
+        if len(chunk) < frame_bytes:
+            chunk = chunk + b"\x00" * (frame_bytes - len(chunk))
+        send_tts_pcm16_16k(chunk)
+        idx += frame_bytes
+        frame_idx += 1
+        target = start + frame_idx * frame_dur
+        remaining = target - time.perf_counter()
+        if remaining > 0:
+            time.sleep(remaining)
+    tts_playing.clear()
+    try:
+        store.publish_event({"type": "state", "name": "tts_playing", "value": False})
+    except Exception:
+        pass
 
 
 def speak(text: str, user_text_for_name_detect: str = None):

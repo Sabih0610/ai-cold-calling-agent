@@ -1,4 +1,7 @@
 # === Core environment ===
+
+psutil
+
 python-dotenv==1.0.1
 redis==5.0.8
 numpy==1.26.4
@@ -13,6 +16,8 @@ fastapi==0.115.2
 uvicorn==0.31.1
 pydantic==2.9.2
 python-multipart==0.0.9
+
+
 
 # === Speech & TTS ===
 piper-tts @ git+https://github.com/rhasspy/piper.git@master

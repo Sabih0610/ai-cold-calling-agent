@@ -147,8 +147,42 @@ def _best_memory_match(norm: str) -> Optional[str]:
 # Conversation Helpers
 # ===============================================================
 def default_opener():
-    return ("Hi, this is Emma from Cloumen. We help businesses automate work and modernize apps. "
-            "Could I confirm your name and what kind of business you run?")
+    return ("Hi there, this is Emma from Cloumen. We help small teams adopt smarter tech so they keep growing. "
+            "We handle AI automation, web, and cloud/data support - how do you keep leads moving today?")
+
+def generate_opener(context_text: str = "", hint_text: str = "") -> str:
+    """
+    Generate an opener without speaking or mutating conversation state.
+    Used for pre-call preparation so we can start talking immediately when the call connects.
+    """
+    if not client:
+        return shape_for_tts(default_opener())
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    context_text = (context_text or "").strip()
+    hint_text = (hint_text or "").strip()
+    if context_text:
+        messages.append({"role": "user", "content": context_text})
+    if hint_text:
+        messages.append({"role": "user", "content": "[FLOW HINT]\n" + hint_text})
+    messages.append({"role": "user", "content": "[START_CALL]"})
+
+    try:
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            temperature=0.6,
+            top_p=0.9,
+            presence_penalty=0.2,
+            frequency_penalty=0.2,
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "120")),
+            messages=messages,
+            timeout=12,
+        )
+        raw = (resp.choices[0].message.content or "").strip() or default_opener()
+        return shape_for_tts(raw)
+    except Exception as e:
+        print(f"⚠️ DeepSeek opener generation error: {e}")
+        return shape_for_tts(default_opener())
 
 def _assemble_messages():
     msgs = [{"role":"system","content":SYSTEM_PROMPT}, *store.conv.load()]

@@ -1,14 +1,154 @@
 # core/lead_context.py
-import json, threading
+import json, threading, os
 
 _LOCK = threading.Lock()
-_CURRENT = None
+_CURRENT = {
+    "lead": None,
+    "campaign": None,
+}
+_PLAYBOOK = None
+_PLAYBOOK_LOCK = threading.Lock()
 
-def set_current_lead(lead_row: dict | None):
+
+def _load_playbook():
+    global _PLAYBOOK
+    if _PLAYBOOK is not None:
+        return _PLAYBOOK
+    with _PLAYBOOK_LOCK:
+        if _PLAYBOOK is not None:
+            return _PLAYBOOK
+        path = os.getenv("SERVICE_PLAYBOOK_PATH", os.path.join("data", "service_playbook.json"))
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                _PLAYBOOK = json.load(f)
+        except Exception as exc:
+            print(f"[LeadContext] Could not load service playbook ({path}): {exc}")
+            _PLAYBOOK = {}
+    return _PLAYBOOK
+
+
+def _text_pool(lead_row: dict, campaign_row: dict | None) -> str:
+    bits = []
+    for val in (lead_row.get("company"), lead_row.get("contact"), lead_row.get("website"),
+                lead_row.get("address"), lead_row.get("city"), lead_row.get("state")):
+        if isinstance(val, str):
+            bits.append(val.lower())
+    source_row = lead_row.get("source_row") or {}
+    if isinstance(source_row, dict):
+        for val in source_row.values():
+            if isinstance(val, str):
+                bits.append(val.lower())
+    if campaign_row:
+        for key in ("name", "slug", "notes"):
+            val = campaign_row.get(key)
+            if isinstance(val, str):
+                bits.append(val.lower())
+    return " ".join(bits)
+
+
+def _rank_profile(lead_row: dict, campaign_row: dict, playbook: dict) -> dict:
+    profiles = playbook.get("profiles") or []
+    if not profiles:
+        return {}
+    pool = _text_pool(lead_row, campaign_row)
+    best = None
+    best_score = 0
+    for profile in profiles:
+        score = 0
+        for kw in profile.get("campaign_keywords", []):
+            if kw.lower() in pool:
+                score += 3
+        for kw in profile.get("industry_keywords", []):
+            if kw.lower() in pool:
+                score += 2
+        if score > best_score:
+            best_score = score
+            best = profile
+    if best and best_score > 0:
+        return best
+    return playbook.get("default_profile") or {}
+
+
+def _resolve_modules(profile: dict, playbook: dict) -> list[dict]:
+    modules = playbook.get("modules") or {}
+    resolved = []
+    for key in profile.get("primary_modules", []):
+        mod = modules.get(key)
+        if mod:
+            resolved.append(("Primary", mod))
+    for key in profile.get("secondary_modules", []):
+        mod = modules.get(key)
+        if mod:
+            resolved.append(("Secondary", mod))
+    return resolved
+
+
+def _render_discovery_block(lead_row: dict, campaign_row: dict, playbook: dict) -> str:
+    profile = _rank_profile(lead_row, campaign_row or {}, playbook)
+    if not profile:
+        return ""
+    modules = _resolve_modules(profile, playbook)
+    lines = []
+    label = profile.get("label", profile.get("id", "Discovery"))
+    summary = profile.get("summary")
+    lines.append(f"Profile: {label}")
+    if summary:
+        lines.append(summary)
+
+    hooks = []
+    for mod in modules:
+        tier, module = mod
+        hooks.extend(module.get("hook_openers", []) or [])
+    hooks = hooks or profile.get("hook_openers", [])
+    if hooks:
+        lines.append("")
+        lines.append("Attention hooks to open with:")
+        for h in hooks[:3]:
+            lines.append(f"- {h}")
+
+    prompts = profile.get("discovery_prompts") or playbook.get("default_profile", {}).get("discovery_prompts") or []
+    if prompts:
+        lines.append("")
+        lines.append("Priority questions:")
+        for q in prompts:
+            lines.append(f"- {q}")
+
+    if modules:
+        lines.append("")
+        lines.append("Service angles to emphasize:")
+        for tier, mod in modules:
+            name = mod.get("name", "Service")
+            value = mod.get("value_prop")
+            lines.append(f"- {tier}: {name}")
+            if value:
+                lines.append(f"  Value: {value}")
+            status_checks = mod.get("status_checks", [])
+            if status_checks:
+                lines.append("  Confirm they already have:")
+                for chk in status_checks:
+                    lines.append(f"    * {chk}")
+            missing_value = mod.get("value_if_missing")
+            if missing_value:
+                lines.append(f"  If gap found: {missing_value}")
+            for idx, question in enumerate(mod.get("discovery_questions", [])[:2], start=1):
+                lines.append(f"  Ask {idx}: {question}")
+            proof = mod.get("proof_points", [])
+            if proof:
+                lines.append(f"  Proof: {proof[0]}")
+            upsell = mod.get("upsell_paths", [])
+            if upsell:
+                lines.append(f"  Upsell: {upsell[0]}")
+
+    return "\n".join(lines).strip()
+
+def set_current_lead(lead_row: dict | None, campaign_row: dict | None = None):
     """Call this right before you originate a call to this lead."""
     global _CURRENT
     with _LOCK:
-        _CURRENT = dict(lead_row or {})
+        _CURRENT = {
+            "lead": dict(lead_row or {}),
+            "campaign": dict(campaign_row or {}) if campaign_row else None,
+        }
 
 def _mask(s: str | None, keep_tail=4):
     if not s: return ""
@@ -21,7 +161,9 @@ def build_context(script_context: str = "", flow_titles: list[str] = None) -> st
     Pass in your agent's short script_context (titles) and optional flow titles.
     """
     with _LOCK:
-        L = dict(_CURRENT or {})
+        state = dict(_CURRENT or {})
+        L = dict(state.get("lead") or {})
+        campaign_row = state.get("campaign") or {}
 
     # Human snapshot (avoid reciting raw contact details)
     parts = []
@@ -62,4 +204,10 @@ def build_context(script_context: str = "", flow_titles: list[str] = None) -> st
     blocks.append("[LEAD SNAPSHOT]\n" + (snapshot or "No visible fields"))
     blocks.append("[LEAD JSON]\n" + json.dumps(raw, ensure_ascii=False, indent=2))
     blocks.append("[LEAD GUIDANCE]\n" + guidance)
+
+    playbook = _load_playbook()
+    if playbook:
+        discovery = _render_discovery_block(raw, campaign_row, playbook)
+        if discovery:
+            blocks.append("[DISCOVERY GUIDE]\n" + discovery)
     return "\n\n".join(blocks)

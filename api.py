@@ -4,6 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from starlette.middleware.cors import CORSMiddleware
 from typing import Optional
+from pydantic import BaseModel
 
 from live_voice_agent import runner
 from agents import manager as agent_manager, voices as voice_catalog
@@ -38,6 +39,12 @@ def require_auth(key: Optional[str] = None):
         if API_KEY and token != API_KEY:
             raise HTTPException(status_code=401, detail="Unauthorized")
     return _dep
+
+class PrewarmRequest(BaseModel):
+    campaign_id: int
+    lead_id: int
+    context_path: Optional[str] = None
+    lead_payload: dict
 
 @app.get("/health")
 async def health():
@@ -80,6 +87,14 @@ async def tts_preview(voice_id: str = Form(...), text: str = Form(...)):
         try: os.unlink(text_path)
         except Exception: pass
         # leave wav for stream until consumed (auto-deleted by temp dirs on reboot)
+
+@app.post("/prewarm", dependencies=[Depends(require_auth())])
+async def prewarm_call(req: PrewarmRequest):
+    print(f"[API] prewarm campaign={req.campaign_id} lead={req.lead_id}")
+    result = runner.prepare_call(req.campaign_id, req.lead_payload or {}, req.context_path)
+    if result.get("status") == "error":
+        raise HTTPException(500, result.get("reason", "prewarm failed"))
+    return result
 
 # ---- Agents CRUD
 @app.get("/agents", dependencies=[Depends(require_auth())])

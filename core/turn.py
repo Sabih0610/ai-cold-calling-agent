@@ -2,6 +2,7 @@
 import os, time, threading
 from core import store, llm
 from core.tts import speak
+from core.audio import audiosocket_ready
 
 # Coalescer state
 COALESCE_GRACE_MS = int(os.getenv("COALESCE_GRACE_MS", "500"))
@@ -70,7 +71,8 @@ def heartbeat_worker():
             idle = _now() - _last_activity_ts
             if (idle >= HEARTBEAT_IDLE_SEC
                 and not llm.tts_playing.is_set()
-                and llm.llm_queue.empty()):
+                and llm.llm_queue.empty()
+                and audiosocket_ready.is_set()):
                 touch_activity()
                 speak(HEARTBEAT_TEXT)
             time.sleep(1.0)

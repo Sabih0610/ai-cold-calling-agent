@@ -1,7 +1,7 @@
-<!--dashboard\templates\campaign_detail.html -->
-
+<!-- dashboard/templates/campaign_detail.html -->
 {% extends "base.html" %}
 {% block content %}
+
 <h2>Campaign: {{ c.name }}</h2>
 
 <section class="kpi">
@@ -15,35 +15,72 @@
 
 <details open>
   <summary><strong>Dialer Control</strong></summary>
-  <div class="row">
-    <form method="post" action="/api/campaigns/{{ c.id }}/activate"><button>Activate</button></form>
-    <form method="post" action="/api/campaigns/{{ c.id }}/pause"><button class="secondary">Pause</button></form>
-    <form method="post" action="/api/dialer/toggle">
-      <input type="hidden" name="enabled" value="{{ 'false' if dialer_enabled=='true' else 'true' }}">
-      <button>{{ "Stop Dialer" if dialer_enabled=="true" else "Start Dialer" }}</button>
-    </form>
+  <div class="row" style="gap:.6rem;align-items:center">
+    <button id="btnActivate" type="button" data-cid="{{ c.id }}">Activate</button>
+    <button id="btnStop" class="secondary" type="button" data-cid="{{ c.id }}">Stop</button>
+
     <a href="/calls?campaign_id={{ c.id }}" role="button" class="contrast">Open Calls</a>
     <a href="/export/leads.csv?campaign_id={{ c.id }}" role="button" class="secondary">Export Leads CSV</a>
+
+    <span style="margin-left:auto;opacity:.8">
+      Dialer:
+      {% if c.is_active %}<strong>ON</strong>{% else %}<strong>OFF</strong>{% endif %}
+      · PID: {{ c.worker_pid or "—" }}
+      · Last HB: {{ c.last_heartbeat or "—" }}
+    </span>
   </div>
 </details>
 
 <details open>
   <summary><strong>Selection Rules</strong></summary>
-  <form method="post" action="/api/campaigns/{{ c.id }}/select" class="row">
-    <label><input type="radio" name="rule" value="all" checked> All</label>
-    <label><input type="radio" name="rule" value="odd"> Odd</label>
-    <label><input type="radio" name="rule" value="even"> Even</label>
-    <label><input type="radio" name="rule" value="every_n"> Every N <input type="number" name="every_n" min="2" value="5" style="max-width:6rem"></label>
-    <label><input type="radio" name="rule" value="start_middle"> Start middle</label>
-    <label><input type="radio" name="rule" value="offset_start"> Start from row <input type="number" name="offset_start" min="1" value="100" style="max-width:8rem"></label>
-    <button>Apply</button>
-  </form>
-  <form method="post" action="/api/campaigns/{{ c.id }}/requeue">
-    <button class="secondary">Requeue ready → NOW()</button>
-  </form>
+
+  {% set sel = c.selection_rule or 'all' %}
+  {% set sel_n = c.selection_n or 5 %}
+
+  <div class="row" id="selRules" style="gap:1rem;align-items:center">
+    <label><input type="radio" name="selRule" value="all"  {% if sel=='all'  %}checked{% endif %}> All</label>
+    <label><input type="radio" name="selRule" value="odd"  {% if sel=='odd'  %}checked{% endif %}> Odd</label>
+    <label><input type="radio" name="selRule" value="even" {% if sel=='even' %}checked{% endif %}> Even</label>
+    <label>
+      <input type="radio" name="selRule" value="every" {% if sel=='every' %}checked{% endif %}>
+      Every N
+      <input id="everyN" type="number" min="2" value="{{ sel_n }}" style="max-width:6rem;margin-left:.4rem">
+    </label>
+  </div>
+
+  <small>“Every N” calls leads where <code>lead_id % N == 0</code>.</small>
 </details>
 
 <h3>Leads</h3>
+
+{% if active_calls %}
+<details open>
+  <summary><strong>Active Calls</strong></summary>
+  <table role="grid" class="leads">
+    <thead>
+      <tr>
+        <th>Lead ID</th><th>Company</th><th>Phone</th><th>City/State</th><th>Since</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in active_calls %}
+      <tr>
+        <td>{{ r.lead_id }}</td>
+        <td>{{ r.company or "—" }}</td>
+        <td>{{ r.phone_e164 or "—" }}</td>
+        <td>{{ (r.city or "") ~ (" / " ~ r.state if r.state else "") }}</td>
+        <td>{{ r.last_called_at or "just now" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% else %}
+<details>
+  <summary><strong>Active Calls</strong></summary>
+  <p style="margin-top:.5rem">No leads are currently in progress.</p>
+</details>
+{% endif %}
 
 <form id="lead-filters" class="row"
       hx-get="/campaigns/{{ c.id }}/leads"
@@ -90,4 +127,54 @@
      hx-trigger="load">
   <!-- HTMX loads table here -->
 </div>
+
+<script>
+(function () {
+  // Toggle Every N input based on selected rule
+  const ruleEls = Array.from(document.getElementsByName('selRule'));
+  const everyN  = document.getElementById('everyN');
+
+  function syncEveryN() {
+    const sel = (ruleEls.find(r => r.checked) || {}).value || 'all';
+    const enabled = sel === 'every';
+    everyN.disabled  = !enabled;
+    everyN.required  = enabled;
+  }
+  ruleEls.forEach(r => r.addEventListener('change', syncEveryN));
+  syncEveryN();
+
+  // Buttons
+  const btnActivate = document.getElementById('btnActivate');
+  const btnStop     = document.getElementById('btnStop');
+
+  async function activateCampaign(cid) {
+    const selEl = ruleEls.find(r => r.checked);
+    const sel   = selEl ? selEl.value : 'all';
+    const n     = everyN.value;
+
+    const params = new URLSearchParams({ selection: sel, parallel: '1' });
+    if (sel === 'every' && n) params.set('every_n', String(n));
+
+    const res = await fetch(`/api/campaigns/${cid}/activate?` + params.toString(), { method: 'POST' });
+    try { await res.json(); } catch (e) {}
+    location.reload();
+  }
+
+  async function stopCampaign(cid) {
+    await fetch(`/api/campaigns/${cid}/stop`, { method: 'POST' });
+    location.reload();
+  }
+
+  btnActivate.addEventListener('click', () => {
+    const cid = btnActivate.dataset.cid;
+    if (cid) activateCampaign(cid);
+  });
+
+  btnStop.addEventListener('click', () => {
+    const cid = btnStop.dataset.cid;
+    if (cid) stopCampaign(cid);
+  });
+})();
+</script>
+
 {% endblock %}

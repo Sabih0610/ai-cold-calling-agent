@@ -1,0 +1,340 @@
+{
+  "default_profile": {
+    "id": "general_consult",
+    "label": "General Discovery",
+    "summary": "Quickly learn how the business acquires customers today, what slows them down, and whether automation, marketing, or infrastructure updates would unlock growth.",
+    "primary_modules": ["consulting_strategy", "voice_ai", "marketing_growth"],
+    "secondary_modules": ["web_modernization", "cloud_devops"],
+    "discovery_prompts": [
+      "What do you rely on today to generate new customers or bookings?",
+      "Which manual tasks still eat up time for you or your team?",
+      "If you could wave a wand and fix one operational bottleneck, what would it be?"
+    ]
+  },
+  "profiles": [
+    {
+      "id": "hospitality_local",
+      "label": "Local Hospitality & Retail",
+      "summary": "Focus on lifting foot traffic, online reviews, and rapid response to inbound calls for restaurants, cafes, salons, spas, gyms, or boutique retail.",
+      "campaign_keywords": ["hospitality", "restaurant", "cafe", "salon", "spa", "fitness", "retail", "food", "coffee", "gym"],
+      "industry_keywords": ["restaurant", "cafe", "coffee", "bakery", "bar", "salon", "spa", "boutique", "fitness", "gym", "wellness", "studio"],
+      "primary_modules": ["voice_ai", "marketing_growth"],
+      "secondary_modules": ["web_modernization", "automation_ops"],
+      "discovery_prompts": [
+        "How do you currently handle missed calls or booking requests?",
+        "What channels drive most of your new guests right now?",
+        "Are you investing in online reviews, loyalty, or retargeting campaigns?"
+      ]
+    },
+    {
+      "id": "travel_agency",
+      "label": "Travel & Tourism",
+      "summary": "Keep tours and trips full by fixing slow quotes, missed calls, and stale trip pages.",
+      "campaign_keywords": ["travel", "tour", "tourism", "agency", "vacation", "holiday", "adventure", "cruise"],
+      "industry_keywords": ["travel", "tour", "tourism", "holiday", "vacation", "adventure", "cruise", "excursion", "booking"],
+      "primary_modules": ["voice_ai", "marketing_growth", "travel_playbooks"],
+      "secondary_modules": ["web_modernization", "automation_ops"],
+      "discovery_prompts": [
+        "How do you handle calls when several families ring in at once?",
+        "Do web or ad leads get a same-day quote from your team?",
+        "What slows you down most when you build or update itineraries?"
+      ]
+    },
+    {
+      "id": "professional_services",
+      "label": "Professional & B2B Services",
+      "summary": "Highlight scheduling automation, CRM integration, and thought-leadership funnels for agencies, consultancies, law, finance, or medical offices.",
+      "campaign_keywords": ["consulting", "law", "legal", "tax", "medical", "clinic", "agency", "professional services"],
+      "industry_keywords": ["consulting", "agency", "law", "attorney", "legal", "clinic", "medical", "finance", "accounting", "tax", "architect", "real estate"],
+      "primary_modules": ["automation_ops", "web_modernization", "voice_ai"],
+      "secondary_modules": ["marketing_growth", "consulting_strategy"],
+      "discovery_prompts": [
+        "Which parts of your client intake or onboarding are still manual?",
+        "Do you have visibility into pipeline performance or deal velocity?",
+        "Where do prospects fall off today—response times, follow-up, education?"
+      ]
+    },
+    {
+      "id": "ecommerce_smb",
+      "label": "E-commerce & Digital-First Brands",
+      "summary": "Lean into conversion optimization, personalized marketing automation, and AI-driven support for online stores or subscription brands.",
+      "campaign_keywords": ["ecommerce", "shop", "store", "brand", "shopify", "woocommerce", "online sales"],
+      "industry_keywords": ["ecommerce", "store", "shop", "brand", "boutique", "subscription", "merch", "retail", "marketplace"],
+      "primary_modules": ["marketing_growth", "web_modernization"],
+      "secondary_modules": ["voice_ai", "automation_ops", "cloud_devops"],
+      "discovery_prompts": [
+        "How are you personalizing the buying journey for repeat customers?",
+        "Which KPIs are you watching—conversion rate, AOV, repeat purchases?",
+        "Where do support tickets pile up—shipping, returns, product education?"
+      ]
+    },
+    {
+      "id": "tech_scaleup",
+      "label": "Tech, SaaS, and Startups",
+      "summary": "Position Cloumen as a product acceleration partner—AI integrations, cloud scaling, DevOps, and data visibility.",
+      "campaign_keywords": ["saas", "software", "startup", "tech", "it services", "cloud"],
+      "industry_keywords": ["software", "platform", "startup", "saas", "technology", "product", "digital", "cloud"],
+      "primary_modules": ["custom_ai", "cloud_devops", "web_modernization"],
+      "secondary_modules": ["consulting_strategy", "voice_ai"],
+      "discovery_prompts": [
+        "What roadmap items keep slipping because of limited engineering time?",
+        "How automated is your deployment, monitoring, and rollback process?",
+        "Where could predictive insights help—churn, usage, lead scoring?"
+      ]
+    },
+    {
+      "id": "media_streaming",
+      "label": "Media, Streaming & Entertainment",
+      "summary": "Showcase GPU-powered streaming pipelines, CDN optimization, and multi-channel monetization for broadcast or OTT campaigns.",
+      "campaign_keywords": ["media", "streaming", "ott", "broadcast", "iptv", "production"],
+      "industry_keywords": ["media", "stream", "broadcast", "ott", "iptv", "tv", "network", "studio", "content"],
+      "primary_modules": ["media_streaming", "cloud_devops"],
+      "secondary_modules": ["custom_ai", "marketing_growth"],
+      "discovery_prompts": [
+        "What challenges do you see with encoding, reliability, or latency today?",
+        "How are you planning to monetize or analyze viewer engagement?",
+        "Do you have GPU infrastructure in place or rely on off-the-shelf tools?"
+      ]
+    }
+  ],
+  "modules": {
+    "voice_ai": {
+      "name": "Voice AI & Call Automation",
+      "value_prop": "Friendly AI agents pick up overflow calls, qualify the caller, and leave clear notes for your team.",
+      "hook_openers": [
+        "We talk with a lot of {industry} teams who miss calls when things get busy. Does that happen to you?",
+        "I noticed {company} gets plenty of interest. How do you make sure someone answers if two families call at once?"
+      ],
+      "discovery_questions": [
+        "What happens when a call comes in after hours or during your rush?",
+        "Do you have a quick way to text back or log details when you miss a call?"
+      ],
+      "status_checks": [
+        "Overflow or after-hours calls reach a person and not just voicemail?",
+        "Automatic callback, SMS, or email goes out when you miss a call?",
+        "Notes or CRM updates created without staff typing them in?"
+      ],
+      "value_if_missing": "Always-on call coverage keeps interested callers warm and frees your team from constant phone duty.",
+      "proof_points": [
+        "24/7 voice agent that books appointments, sends recaps, and syncs with your CRM.",
+        "Custom call flows that match your brand tone and escalation rules."
+      ],
+      "upsell_paths": [
+        "Pair with marketing automation so campaigns trigger instant follow-up.",
+        "Layer reporting that shows call reasons, win rates, and saved staff hours."
+      ]
+    },
+    "marketing_growth": {
+      "name": "Digital Marketing & Growth Funnels",
+      "value_prop": "Simple paid and organic campaigns across search, social, and email that bring steady leads you can track.",
+      "hook_openers": [
+        "Your reviews and site look strong. How are you keeping new demand coming in?",
+        "When travel season spikes, do you get enough qualified leads online or does the list feel thin?"
+      ],
+      "discovery_questions": [
+        "Which channel sends you the best customers today?",
+        "Do you run remarketing or loyalty flows to bring people back?",
+        "Do you track which ads or posts turn into real trips?"
+      ],
+      "status_checks": [
+        "Active paid search or social campaigns with tracked results?",
+        "Email or SMS nurtures for past travelers?",
+        "Clear view from ad click to booking?"
+      ],
+      "value_if_missing": "Dialed-in growth keeps trips full, warms past guests, and shows where spend is worth it.",
+      "proof_points": [
+        "Full-funnel content calendars plus paid ads with simple dashboards.",
+        "Creative and analytics team that tweaks weekly based on cost per lead."
+      ],
+      "upsell_paths": [
+        "Bundle with web modernization for fast landing pages and better SEO.",
+        "Sync campaigns with AI voice follow-up so every warm lead hears back fast."
+      ]
+    },
+    "web_modernization": {
+      "name": "Web & App Modernization",
+      "value_prop": "Fast, clear sites and booking flows that make it easy to inquire from any device.",
+      "hook_openers": [
+        "How quickly can someone book or request help from your site today?",
+        "Does your site still feel current and fast on a phone?"
+      ],
+      "discovery_questions": [
+        "When was the last refresh of your site or app?",
+        "Can you see where visitors drop off in the form or checkout?",
+        "How hard is it for your team to update trip info or promos?"
+      ],
+      "status_checks": [
+        "Site optimized for mobile speed and modern design?",
+        "Clear booking or contact buttons with basic analytics in place?",
+        "Marketing can update content without waiting on engineering?"
+      ],
+      "value_if_missing": "A modern, fast experience builds trust, lifts conversions, and lets marketing move quickly.",
+      "proof_points": [
+        "Next.js or Laravel builds tuned for speed, SEO, and simple editing.",
+        "CMS or headless setup so teams change content in minutes."
+      ],
+      "upsell_paths": [
+        "Connect to analytics dashboards for live conversion tracking.",
+        "Add personalization and AI suggestions for returning visitors."
+      ]
+    },
+    "travel_playbooks": {
+      "name": "Travel Sales Playbooks",
+      "value_prop": "Shared workflows that keep inquiries, quotes, and balances organized so trips stay on track.",
+      "hook_openers": [
+        "Many travel teams juggle calls, quotes, and payments in different tools. How do you track it today?",
+        "When a family asks for a custom trip, how do you make sure nothing slips?"
+      ],
+      "discovery_questions": [
+        "How long does it take to send a fresh quote once someone calls?",
+        "Where do you keep open itineraries and payment reminders?",
+        "Who follows up if a traveler has not paid their balance yet?"
+      ],
+      "status_checks": [
+        "Single place to see every open inquiry and quote?",
+        "Template or checklist for building itineraries fast?",
+        "Automatic reminders for balances, waivers, or travel docs?"
+      ],
+      "value_if_missing": "Simple playbooks keep trips moving, stop hot leads from going quiet, and save the owner from chasing details.",
+      "proof_points": [
+        "Boards or CRM stages that show owner, status, and next action for every trip.",
+        "Automations that send quote follow-ups and remind travelers about documents."
+      ],
+      "upsell_paths": [
+        "Layer AI voice follow-up so missed calls drop straight into the same board.",
+        "Add dashboards that show bookings won, lost, and revenue per package."
+      ]
+    },
+    "automation_ops": {
+      "name": "Workflow Automation & Integrations",
+      "value_prop": "Replace manual spreadsheets and hand-offs with orchestrated automations across CRMs, calendars, ERP, or custom apps.",
+      "hook_openers": [
+        "I hear many teams still chase spreadsheets - which parts of your process feel the most manual?",
+        "When a new lead/customer lands, how many systems do you have to update by hand?"
+      ],
+      "discovery_questions": [
+        "Which tasks steal the most hours from your team each week?",
+        "How many separate systems do you update when a new order/client arrives?"
+      ],
+      "status_checks": [
+        "Manual copy/paste between CRM, booking, invoicing?",
+        "Triggers or automations when status changes?",
+        "Single source of truth dashboards for operations?"
+      ],
+      "value_if_missing": "Automation keeps the team focused on high-value work, eliminates errors, and gives real-time visibility.",
+      "proof_points": [
+        "Integration layer using Python/FastAPI, Zapier alternatives, or custom middleware.",
+        "Dashboards that show real-time status of leads, jobs, or service tickets."
+      ],
+      "upsell_paths": [
+        "Add AI summarization or decisioning on top of automated workflows.",
+        "Expand into analytics dashboards for leadership reporting."
+      ]
+    },
+    "cloud_devops": {
+      "name": "Cloud Engineering & DevOps",
+      "value_prop": "Design, migrate, and optimize infrastructure for reliability, cost control, and rapid deployment.",
+      "hook_openers": [
+        "When you ship code today, is it a button click or an all-hands fire drill?",
+        "How confident are you in uptime and response if traffic spikes this weekend?"
+      ],
+      "discovery_questions": [
+        "What is your current deployment process—manual or automated?",
+        "Do you struggle with uptime, scaling costs, or observability?"
+      ],
+      "status_checks": [
+        "CI/CD pipeline with automated tests & rollback?",
+        "Monitoring/alerting stack tied to SLAs?",
+        "Infrastructure-as-code and cost optimization cadence?"
+      ],
+      "value_if_missing": "A solid DevOps backbone shortens delivery cycles, keeps uptime predictable, and avoids runaway cloud bills.",
+      "proof_points": [
+        "AWS/Azure/GCP reference architectures with Terraform or Pulumi.",
+        "CI/CD pipelines, monitoring, and incident response baked in."
+      ],
+      "upsell_paths": [
+        "Bundle with GPU infrastructure for AI workloads.",
+        "Create executive dashboards for platform health and cost trends."
+      ]
+    },
+    "custom_ai": {
+      "name": "Custom AI & Data Products",
+      "value_prop": "Fine-tuned models, embeddings, and AI apps that automate decisions, personalize experiences, or unlock new services.",
+      "hook_openers": [
+        "You likely sit on a ton of data — are you putting it to work for predictions or personalization yet?",
+        "If your team had an AI copilot tomorrow, where would you deploy it first?"
+      ],
+      "discovery_questions": [
+        "Do you collect data that could power predictions or personalization?",
+        "Where would an AI copilot save your team the most time?"
+      ],
+      "status_checks": [
+        "Centralized data warehouse/lake ready for modeling?",
+        "Existing AI experiments or pilot programs?",
+        "Use cases where decisions rely on gut vs data?"
+      ],
+      "value_if_missing": "Custom AI turns raw data into automations, better customer experiences, and new revenue streams.",
+      "proof_points": [
+        "LLM fine-tuning, retrieval augmented generation, and multi-modal agents.",
+        "Secure deployments on your cloud with compliance and monitoring."
+      ],
+      "upsell_paths": [
+        "Combine with voice/chat agents for omni-channel support.",
+        "Add dashboards so stakeholders can validate AI outcomes."
+      ]
+    },
+    "media_streaming": {
+      "name": "Media & Streaming Infrastructure",
+      "value_prop": "GPU-accelerated live and on-demand streaming pipelines with low latency and robust monitoring.",
+      "hook_openers": [
+        "How confident are you in quality when streams hit peak viewers?",
+        "Do you have the analytics you need on viewer engagement and monetization?"
+      ],
+      "discovery_questions": [
+        "How do you currently encode and deliver your streams?",
+        "What SLAs do you need for uptime and quality of service?"
+      ],
+      "status_checks": [
+        "Automated, multi-bitrate encoding with redundancy?",
+        "GPU acceleration or cloud pipeline to control costs?",
+        "Visibility into stream quality, outages, and viewer metrics?"
+      ],
+      "value_if_missing": "Robust streaming infrastructure protects viewer experience, unlocks monetization, and keeps operations hands-off.",
+      "proof_points": [
+        "FFmpeg + NVENC pipelines, multi-bitrate HLS/DASH packaging, and DRM.",
+        "Automation for channel scheduling, ad insertion, and analytics."
+      ],
+      "upsell_paths": [
+        "Extend into monetization dashboards and audience insights.",
+        "Integrate personalized recommendations using custom AI."
+      ]
+    },
+    "consulting_strategy": {
+      "name": "Technology & Growth Consulting",
+      "value_prop": "Help leadership pick the next wins, set a simple plan, and bring the people to ship it.",
+      "hook_openers": [
+        "Which big ideas keep getting pushed because no one has time?",
+        "Do you feel clear on which tech project would move the needle this quarter?"
+      ],
+      "discovery_questions": [
+        "Which projects are stuck because you lack time or the right team?",
+        "Do you know which work is maintenance versus true growth bets?",
+        "Who owns keeping the plan on track week to week?"
+      ],
+      "status_checks": [
+        "Simple roadmap with owners and dates?",
+        "Dedicated leads for automation, AI, or web efforts?",
+        "Regular review to check KPIs and adjust?"
+      ],
+      "value_if_missing": "A steady partner keeps the plan real, brings hands to deliver, and frees leaders to focus on clients and growth.",
+      "proof_points": [
+        "Fractional CTO/CMO support that builds clear roadmaps with simple metrics.",
+        "Cross-functional squads that ship work and train your team as they go."
+      ],
+      "upsell_paths": [
+        "Spin up dedicated squads once the plan is green-lit.",
+        "Set up lightweight governance and reporting cadences."
+      ]
+    }
+  }
+}
