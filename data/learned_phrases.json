@@ -3610,5 +3610,17 @@
   "i dont know what youre talking about": {
     "count": 1,
     "reply": "I am just checking in about your business goals for the year. what is one area you'd like to improve most?"
+  },
+  "i am sometimes a loser": {
+    "count": 1,
+    "reply": "that is okay, we all have those days. what is working well for you right now with your calls or website?"
+  },
+  "well the road calls are not very good i know what road my website is great secondly the things that im not getting on the line": {
+    "count": 1,
+    "reply": "Got it, so your website is solid but you are missing calls on the road. Would a smart assistant that catches those calls for you help?"
+  },
+  "yeah that would really help me but could you please define how are you going to pull that thing over and leave it for me": {
+    "count": 1,
+    "reply": "We set up a friendly AI that answers, takes messages, and sends them right to you. Would a quick demo of how it works make sense?"
   }
 }

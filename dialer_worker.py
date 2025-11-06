@@ -499,6 +499,9 @@ def worker_loop(cid: int, selection: str, every: int | None, threads: int):
                             time.sleep(2.0)
                         continue
 
+                    gap = max(0.0, float(os.getenv("DIALER_CALL_GAP_SEC", "0")))
+                    if gap > 0:
+                        time.sleep(gap)
                     print(f"[{name}] Calling lead {job[1]} ({job[2]}) in campaign {job[0]}...")
                     originate_once(cur, cfg, job)
                     conn.commit()
