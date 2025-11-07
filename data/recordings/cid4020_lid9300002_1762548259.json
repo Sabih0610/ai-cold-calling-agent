@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Taylor, I see Gamma Solutions is in Houston and works in e-commerce. what is your current process for shipping code updates?"
+  },
+  {
+    "role": "user",
+    "content": "Who are you? Why are you giving me a call?"
+  },
+  {
+    "role": "assistant",
+    "content": "Totally fair question. I’m Emma with Cloumen—we build AI-powered outreach that handles first-touch calls and qualification so teams like yours stay focused on real conversations. I’d never share anything you tell me; I’m only here to spot whether we can actually help. Would it be okay if I ask a quick question about how your team handles follow-ups or qualification? Who’s involved in your current process?"
+  },
+  {
+    "role": "user",
+    "content": "Like more, should I share with you these things?"
+  },
+  {
+    "role": "assistant",
+    "content": "I appreciate you asking-only share what feels comfortable. I am just curious, how does your team currently handle lead follow-ups or customer outreach?"
+  }
+]

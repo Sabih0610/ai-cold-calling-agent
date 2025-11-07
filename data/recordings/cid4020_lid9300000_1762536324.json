@@ -1,0 +1,34 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Hayden, I see Gamma Group is based in Houston. What happens when a call comes in during your busiest hours?"
+  },
+  {
+    "role": "user",
+    "content": "No, what did I tell you that?"
+  },
+  {
+    "role": "assistant",
+    "content": "Got it, sorry for the mix-up. Who usually handles your incoming calls when things get busy?"
+  },
+  {
+    "role": "user",
+    "content": "Guys, didn't get anything to say to you, but why should I tell you about anything?"
+  },
+  {
+    "role": "assistant",
+    "content": "Totally fair question. I’m Emma with Cloumen—we build AI-powered outreach that handles first-touch calls and qualification so teams like yours stay focused on real conversations. I’d never share anything you tell me; I’m only here to spot whether we can actually help. Would it be okay if I ask a quick question about how your team handles follow-ups or qualification? Who’s involved in your current process?"
+  },
+  {
+    "role": "user",
+    "content": "Like, why should I share anything with you? Like, I didn't even know you yet."
+  },
+  {
+    "role": "assistant",
+    "content": "I get that-it is smart to be careful. I am just curious, what is one thing that takes up too much of your team is time right now?"
+  }
+]

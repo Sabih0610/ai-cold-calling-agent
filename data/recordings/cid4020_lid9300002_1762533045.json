@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Taylor, I saw Gamma Solutions is in Houston. Which big ideas keep getting pushed because no one has time?"
+  },
+  {
+    "role": "user",
+    "content": "What should I tell you?"
+  },
+  {
+    "role": "assistant",
+    "content": "what is working well with your current tools or website?"
+  },
+  {
+    "role": "user",
+    "content": "Oh, what should I tell you that?"
+  },
+  {
+    "role": "assistant",
+    "content": "I am just curious what parts of your business feel smooth versus what still feels messy."
+  },
+  {
+    "role": "user",
+    "content": "Like, if you ever tell me about that, what are you going to do?"
+  },
+  {
+    "role": "assistant",
+    "content": "If you tell me what is working, I can suggest one small way to make the messy part easier. Sound okay?"
+  },
+  {
+    "role": "user",
+    "content": "Never touch your phone without watching it trust you."
+  },
+  {
+    "role": "assistant",
+    "content": "I understand you are being careful. what is one small task that takes up too much of your time?"
+  }
+]

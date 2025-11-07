@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Conversations</h2>
+
+<form class="row" method="get" action="/conversations">
+  <label>Campaign
+    <input type="number" name="campaign_id" value="{{ campaign_id or '' }}" min="1" style="max-width:8rem">
+  </label>
+  <label>Lead ID
+    <input type="number" name="lead_id" value="{{ lead_id or '' }}" min="1" style="max-width:8rem">
+  </label>
+  <label>Limit
+    <input type="number" name="limit" value="{{ limit }}" min="1" max="500" style="max-width:7rem">
+  </label>
+  <button class="secondary">Apply</button>
+</form>
+
+<table role="grid" class="leads">
+  <thead>
+    <tr>
+      <th>Campaign</th>
+      <th>Lead</th>
+      <th>Business</th>
+      <th>Contact</th>
+      <th>Started</th>
+      <th>Disposition</th>
+      <th>Duration (s)</th>
+      <th>Recording</th>
+      <th>Transcript</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for entry in entries %}
+    <tr>
+      <td>{{ entry.campaign_name or "—" }}</td>
+      <td>{{ entry.lead_id }}</td>
+      <td>{{ entry.company or "—" }}</td>
+      <td>{{ entry.contact or "—" }}</td>
+      <td>{{ entry.started_at or "—" }}</td>
+      <td>
+        {% if entry.disposition %}
+          <span class="badge disp {{ entry.disposition|lower|replace(' ','_') }}">{{ entry.disposition }}</span>
+        {% endif %}
+      </td>
+      <td>{{ entry.duration or "" }}</td>
+      <td>
+        {% if entry.recording_url %}
+          <audio controls preload="none" style="width:200px">
+            <source src="{{ entry.recording_url }}" type="audio/wav">
+            Your browser does not support the audio element.
+          </audio>
+          <br>
+          <a href="{{ entry.recording_url }}" target="_blank">Download</a>
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td style="max-width:360px">
+        {% if entry.transcript %}
+          <details>
+            <summary>View</summary>
+            <div class="transcript">
+              {% for turn in entry.transcript %}
+                <p><strong>{{ turn.role|capitalize }}:</strong> {{ turn.content }}</p>
+              {% endfor %}
+            </div>
+          </details>
+        {% else %}
+          <span class="badge dim">No transcript</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

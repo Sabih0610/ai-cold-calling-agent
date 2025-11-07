@@ -3,6 +3,7 @@ import os, time, collections, threading, socket, struct, queue, atexit, math
 import numpy as np
 import sounddevice as sd
 import webrtcvad
+from core import recording
 
 # ---------- High-res timer for Windows ----------
 if os.name == "nt":
@@ -374,6 +375,10 @@ class _AudioSocketTx:
         if not self.alive or not pcm16_bytes:
             return
         try:
+            recording.write_tx(pcm16_bytes)
+        except Exception:
+            pass
+        try:
             self.q.put(pcm16_bytes, timeout=0.1)
         except queue.Full:
             pass
@@ -594,6 +599,7 @@ def run_audiosocket_loop(stop_event,
 
                             if _RX_MODE == "compat":
                                 audio_queue.append(frame_bytes)
+                                recording.write_rx(frame_bytes)
                                 enq += 1
                                 continue
 
@@ -624,13 +630,17 @@ def run_audiosocket_loop(stop_event,
                                 do_enqueue = vad_run >= int(os.getenv("RX_VAD_CONSEC", "1"))
 
                             if do_enqueue:
-                                audio_queue.append(filt.tobytes())
+                                frame_out = filt.tobytes()
+                                audio_queue.append(frame_out)
+                                recording.write_rx(frame_out)
                                 enq += 1
                             else:
                                 if RX_DEBUG: print("[RX] vad")
                                 drop_vad += 1
                                 if RX_ZERO_ON_DROP:
-                                    audio_queue.append(np.zeros_like(filt).tobytes())
+                                    silent = np.zeros_like(filt).tobytes()
+                                    audio_queue.append(silent)
+                                    recording.write_rx(silent)
 
                             nowr = time.time()
                             if nowr - last_report >= 1.0:

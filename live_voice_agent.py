@@ -11,6 +11,8 @@ load_dotenv()
 
 from core import store, stt, tts, llm, turn
 from core import lead_context
+from core import recording
+from core import flow_state
 
 # Telephony latch & helpers (PBX build). In local mode these fall back.
 try:
@@ -91,7 +93,11 @@ class Runner:
             flow_titles = [s.get("title", "") for s in (self._flow.sections if self._flow else [])]
             hint_text = self._flow.hint if self._flow else ""
             context_text = lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
-            opener_text = llm.generate_opener(context_text, hint_text)
+            opener_text = llm.generate_opener(
+                context_text,
+                hint_text,
+                lead_snapshot=lead_raw
+            )
             pcm_bytes = tts.synthesize_to_pcm16(opener_text)
             lead_key_val = lead_payload.get("lead_id") or lead_raw.get("id")
             try:
@@ -204,12 +210,14 @@ class Runner:
                 next_path = os.path.join(ctx_dir, "next.json")
                 lead_payload = None
                 lead_id = campaign_id = None
+                rec_basename = None
                 if os.path.exists(next_path):
                     with open(next_path, "r", encoding="utf-8") as f:
                         ptr = json.load(f)
                     context_path = ptr.get("context_path")
                     lead_id = ptr.get("lead_id")
                     campaign_id = ptr.get("campaign_id")
+                    rec_basename = ptr.get("rec_basename")
                     if context_path and os.path.exists(context_path):
                         with open(context_path, "r", encoding="utf-8") as f:
                             lead_payload = json.load(f)
@@ -223,6 +231,10 @@ class Runner:
                     except Exception:
                         pass
                     lead_context.set_current_lead(lead_payload.get("lead_full_raw"), campaign_row=lead_payload.get("campaign_raw"))
+                    try:
+                        recording.start(rec_basename or f"cid{campaign_id}_lid{lead_id}_{int(time.time())}")
+                    except Exception:
+                        recording.start(f"cid{campaign_id or 'x'}_lid{lead_id or 'y'}_{int(time.time())}")
                     # Rotate conversation + session per call
                     try: store.close_session()
                     except Exception: pass
@@ -230,8 +242,28 @@ class Runner:
                         store.new_conversation(key=f"{campaign_id or 'x'}_{lead_id or 'y'}_{int(time.time())}")
                     except Exception:
                         pass
-                    try: store.open_new_session()
-                    except Exception: pass
+                    try:
+                        store.open_new_session()
+                    except Exception:
+                        pass
+                    try:
+                        turn.touch_activity()
+                    except Exception:
+                        pass
+                    try:
+                        tts.tts_interrupt()
+                    except Exception:
+                        pass
+                    try:
+                        while True:
+                            item = llm.llm_queue.get_nowait()
+                            llm.llm_queue.task_done()
+                    except queue.Empty:
+                        pass
+                    try:
+                        stt.clear_audio_queue()
+                    except Exception:
+                        pass
 
                     # Install providers to include lead context + flow hint
                     agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
@@ -302,6 +334,7 @@ class Runner:
                         llm._first_turn_done = True
                     except Exception:
                         pass
+                    flow_state.set_stage(1)
                     print("[Opener] Prepared opener sent.")
                 else:
                     disk_pcm_path = os.path.join(
@@ -352,14 +385,26 @@ class Runner:
                             except Exception:
                                 pass
                             print("[Opener] Disk-prepared opener sent.")
+                            flow_state.set_stage(1)
                             continue
                         except Exception as exc:
                             print(f"[Opener] Failed to use disk opener: {exc}")
                     if os.getenv("PREPARED_DEBUG", "0") == "1":
                         print(f"[Opener] Prepared opener missing for campaign={campaign_id} lead={lead_id}; falling back to live generation.")
                     print("[Opener] Bridge detected. Generating opener via LLM...")
-                    # STT is already armed; ask LLM for a short opener grounded in lead
-                    llm.deepseek_stream_and_speak("[START_CALL]")
+                    lead_snapshot = (lead_payload or {}).get("lead_full_raw") if 'lead_payload' in locals() else None
+                    opener_text = llm.generate_opener(context_text, hint_text, lead_snapshot=lead_snapshot) or llm.default_opener()
+                    try:
+                        store.conv.append("user", "[START_CALL]")
+                        store.enqueue_turn("user", "[START_CALL]")
+                    except Exception:
+                        pass
+                    store.conv.append("assistant", opener_text)
+                    store.enqueue_turn("assistant", opener_text)
+                    store.publish_event({"type": "assistant_turn", "text": opener_text})
+                    turn.touch_activity()
+                    _speak(opener_text)
+                    flow_state.set_stage(1)
                     turn.touch_activity()
                     print("[Opener] LLM opener sent.")
             except Exception as e:
@@ -374,6 +419,21 @@ class Runner:
 
             print("[Opener] Call ended. Waiting for the next call...")
             turn.touch_activity()
+            transcript = []
+            try:
+                transcript = store.conv.load()
+            except Exception:
+                transcript = []
+            try:
+                info = recording.stop()
+                if info:
+                    basename, _wav_path = info
+                    try:
+                        recording.save_transcript(basename, transcript)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             try:
                 tts.tts_interrupt()
             except Exception:
@@ -386,6 +446,10 @@ class Runner:
                 pass
             try:
                 llm._first_turn_done = False
+            except Exception:
+                pass
+            try:
+                flow_state.reset()
             except Exception:
                 pass
 
@@ -427,6 +491,7 @@ class Runner:
 
         # Mark running before any opener logic
         self._running = True
+        flow_state.reset()
 
         # 8) Opener policy
         if use_script_opener:

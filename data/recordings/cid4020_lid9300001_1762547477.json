@@ -1,0 +1,58 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Rowan, I saw Gamma Labs is in Houston and works in pharmaceuticals. What slows your team down the most right now?"
+  },
+  {
+    "role": "user",
+    "content": "Didn't get to be repeated again."
+  },
+  {
+    "role": "assistant",
+    "content": "Got it, so you are saying something did not get repeated. What part of your process usually causes those kinds of delays?"
+  },
+  {
+    "role": "user",
+    "content": "Are you deaf or what? I just said that I didn't get you the first time you said. Can you repeat what did you say?"
+  },
+  {
+    "role": "assistant",
+    "content": "I am sorry, my voice must have cut out there. I was asking what slows your team down the most at Gamma Labs."
+  },
+  {
+    "role": "user",
+    "content": "Um, like right now nothing."
+  },
+  {
+    "role": "assistant",
+    "content": "I hear that things are running smoothly for you right now, which is great. What time works best for you?"
+  },
+  {
+    "role": "user",
+    "content": "Why should people fall like I didn't need you guys for the story?"
+  },
+  {
+    "role": "assistant",
+    "content": "I understand it can feel like an unnecessary step when things are already working. Could we schedule a quick 10-minute chat for later today or tomorrow?"
+  },
+  {
+    "role": "user",
+    "content": "Like how are we gonna help me? We don't know about my business."
+  },
+  {
+    "role": "assistant",
+    "content": "I get that-it is hard to see how an outsider can help when you know your business best. Would a 10-minute chat later today work?"
+  },
+  {
+    "role": "user",
+    "content": "While you're repeating that, why do you want to fall so desperately?"
+  },
+  {
+    "role": "assistant",
+    "content": "I hear you-it can feel like I am pushing too hard when things are already working. Would a quick 10-minute chat tomorrow work for you?"
+  }
+]

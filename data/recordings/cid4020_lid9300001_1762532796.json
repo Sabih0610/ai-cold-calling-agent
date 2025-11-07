@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Rowan, I saw Gamma Labs is in Houston. Which big ideas keep getting pushed because no one has time?"
+  },
+  {
+    "role": "user",
+    "content": "What do I tell you that?"
+  },
+  {
+    "role": "assistant",
+    "content": "I am just curious what is on your to-do list that never gets done. what is one thing you wish ran smoother?"
+  },
+  {
+    "role": "user",
+    "content": "Just like while you're asking me these type of questions, I don't want to tell anyone about my business."
+  },
+  {
+    "role": "assistant",
+    "content": "I understand completely, Rowan. what is one small daily hassle you'd love to fix?"
+  },
+  {
+    "role": "user",
+    "content": "Well, not from you guys. I should accept you."
+  },
+  {
+    "role": "assistant",
+    "content": "No problem at all, Rowan. Could I ask who you usually work with for your tech or marketing needs?"
+  },
+  {
+    "role": "user",
+    "content": "Well, we have a free housing marketing team and we don't need tech support as much as we think."
+  },
+  {
+    "role": "user",
+    "content": "Well I don't need any marketing support or tech support from you guys."
+  }
+]

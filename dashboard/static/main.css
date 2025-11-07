@@ -36,3 +36,5 @@ table.leads td, table.leads th{white-space:nowrap}
 
 /* Pagination */
 .pagination{display:flex;gap:.75rem;align-items:center;margin-top:.6rem}
+.transcript{max-height:260px;overflow:auto;padding:.4rem .6rem;background:#111;border:1px solid #1f1f1f;border-radius:6px}
+.transcript p{margin:0 0 .4rem 0;font-size:.9rem;line-height:1.4}

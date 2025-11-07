@@ -22,6 +22,8 @@ from dotenv import load_dotenv
 import argparse
 import requests
 
+from core import recording
+
 # ------------------ env ------------------
 load_dotenv()
 DB_URL   = os.getenv("DATABASE_URL", "postgresql://dialer:dialer@localhost:5432/dialer")
@@ -291,9 +293,15 @@ def atomic_write_json(path: str, payload: dict):
         json.dump(payload, f, ensure_ascii=False, default=str)
     os.replace(tmp, path)
 
-def write_context_json(payload: dict) -> str:
+def write_context_json(payload: dict, rec_basename: str | None = None) -> str:
     if not payload:
         return ""
+    if rec_basename:
+        try:
+            payload = dict(payload)
+            payload["rec_basename"] = rec_basename
+        except Exception:
+            pass
     fname = f"{payload['campaign_id']}_{payload['lead_id']}.json"
     final_path = os.path.join(CTX_DIR, fname)
     atomic_write_json(final_path, payload)
@@ -387,8 +395,10 @@ def originate_once(cur, cfg, job):
 
     channel = teststr if mode == "TEST" else livestr.replace("${PHONE_E164}", phone or "")
 
+    rec_basename = f"cid{campaign_id}_lid{lead_id}_{int(time.time())}"
+
     ctx_payload  = fetch_full_raw(cur, lead_id, campaign_id)
-    ctx_path     = write_context_json(ctx_payload)
+    ctx_path     = write_context_json(ctx_payload, rec_basename)
     ctx_path_var = ctx_path.replace("\\", "/")
 
     if PREWARM_URL:
@@ -421,7 +431,6 @@ def originate_once(cur, cfg, job):
     contact = lead_raw.get("contact") or " ".join(filter(None, [lead_raw.get("first_name"), lead_raw.get("last_name")]))
     label = company or contact or phone or f"Lead {lead_id}"
 
-    rec_basename = f"cid{campaign_id}_lid{lead_id}_{int(time.time())}"
     vars_str = (
         f"LEAD_ID={lead_id}"
         f"|CAMPAIGN_ID={campaign_id}"
@@ -453,6 +462,24 @@ def originate_once(cur, cfg, job):
                 ami.close()
         except Exception:
             pass
+
+    promote_threshold = float(os.getenv("ANSWERED_MIN_DURATION_SEC", "2.0"))
+    wait_for_recording = float(os.getenv("ANSWERED_RECORDING_WAIT_SEC", "3.0"))
+    actual_duration = 0.0
+    if rec_basename:
+        waited = 0.0
+        poll = 0.2
+        exists = False
+        max_wait = max(0.0, wait_for_recording)
+        while True:
+            exists, actual_duration, _ = recording.get_recording_duration_secs(rec_basename)
+            if exists or waited >= max_wait:
+                break
+            time.sleep(poll)
+            waited += poll
+        if exists and actual_duration >= promote_threshold and disp != "ANSWERED":
+            disp = "ANSWERED"
+            dur = max(dur, int(round(actual_duration)))
 
     print(f"[{threading.current_thread().name}] Lead {lead_id} -> {disp} ({dur}s)")
     rec_url = f"/recordings/{rec_basename}.wav"

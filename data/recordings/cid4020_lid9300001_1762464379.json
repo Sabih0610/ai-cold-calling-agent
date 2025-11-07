@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Rowan, this is Emma from Cloumen. Which big ideas keep getting pushed because no one has time?"
+  },
+  {
+    "role": "user",
+    "content": "I'm gonna go to the next one."
+  },
+  {
+    "role": "assistant",
+    "content": "No problem, thanks for your time. Have a great day!"
+  }
+]

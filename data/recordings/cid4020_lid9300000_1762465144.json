@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Hayden, this is Emma from Cloumen. what is one task that still eats up a lot of your team is time?"
+  }
+]

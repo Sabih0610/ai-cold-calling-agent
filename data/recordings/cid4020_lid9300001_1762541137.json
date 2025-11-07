@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Rowan, I saw Gamma Labs is based in Houston. What slows your team down the most right now?"
+  }
+]

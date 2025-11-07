@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Hayden, this is Emma from Cloumen. what is one task that still eats up your team is time?"
+  },
+  {
+    "role": "user",
+    "content": "Yeah, this is James and I like to automate my air cold work."
+  },
+  {
+    "role": "assistant",
+    "content": "Hi James, we build tools that handle repetitive tasks automatically. what is one job you wish your team did not have to do by hand?"
+  },
+  {
+    "role": "user",
+    "content": "I would say that our receptionist agent is able to attend all our calls."
+  },
+  {
+    "role": "assistant",
+    "content": "that is great your receptionist handles calls well. Would a quick follow-up chat about that make sense?"
+  },
+  {
+    "role": "user",
+    "content": "Uh, y'all, that makes sense."
+  },
+  {
+    "role": "assistant",
+    "content": "Perfect, I will send a quick email to set that up. what is the best address to reach you?"
+  },
+  {
+    "role": "user",
+    "content": "Oh, you should know my email, right?"
+  },
+  {
+    "role": "assistant",
+    "content": "I do not have it handy, could you share your email address with me?"
+  }
+]

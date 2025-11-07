@@ -1,0 +1,46 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Rowan, I saw you are with Gamma Labs in Houston. Which big ideas keep getting pushed because no one has time?"
+  },
+  {
+    "role": "user",
+    "content": "Why should I tell him that?"
+  },
+  {
+    "role": "assistant",
+    "content": "Fair question. I am curious what is working well for you right now."
+  },
+  {
+    "role": "user",
+    "content": "Well, literally, why do I tell you that? Who are you? I don't even know you."
+  },
+  {
+    "role": "assistant",
+    "content": "I am with Cloumen, we help labs like yours automate busywork. what is one task that eats up your team is time?"
+  },
+  {
+    "role": "assistant",
+    "content": "If you want me to end the call, please say exactly: end call now. Otherwise, how can I help?"
+  },
+  {
+    "role": "user",
+    "content": "Well, I said that I... I should have told you anything about the company like what? Taking my team's time or anything, why should I tell you that?"
+  },
+  {
+    "role": "assistant",
+    "content": "You are right to be careful. What is one small daily hassle your team faces?"
+  },
+  {
+    "role": "user",
+    "content": "What is in it for you?"
+  },
+  {
+    "role": "assistant",
+    "content": "If we can save your team time, we earn a chance to help. What is one manual job you wish was automatic?"
+  }
+]

@@ -10,6 +10,10 @@ from core import store
 from core.tts import speak, tts_playing
 from core import turn
 from core import guards
+from core import callplaybook
+from core import persona
+from core import flow_state
+from core import lead_context
 
 # ===============================================================
 # DeepSeek / LLM Configuration
@@ -30,6 +34,23 @@ _context_provider: Callable[[], str] = lambda: ""
 _hint_provider: Callable[[], str] = lambda: ""
 
 SPECIAL_COMMANDS = {"start_call"}
+
+POSITIVE_CLOSE_CUES = (
+    "sounds good",
+    "that could help",
+    "that's good",
+    "that's great",
+    "sure",
+    "okay",
+    "alright",
+    "let's do it",
+    "send it",
+    "yeah",
+    "would help",
+    "makes sense",
+    "if it could help",
+    "that would be good",
+)
 
 # ===============================================================
 # Providers Setup
@@ -147,10 +168,10 @@ def _best_memory_match(norm: str) -> Optional[str]:
 # Conversation Helpers
 # ===============================================================
 def default_opener():
-    return ("Hi there, this is Emma from Cloumen. We help small teams adopt smarter tech so they keep growing. "
-            "We handle AI automation, web, and cloud/data support - how do you keep leads moving today?")
+    return ("Hi there, this is Emma from Cloumen. We partner with local teams to keep their customer journey smooth and personal. "
+            "What's one part of your day-to-day operations that still feels slower than it should?")
 
-def generate_opener(context_text: str = "", hint_text: str = "") -> str:
+def generate_opener(context_text: str = "", hint_text: str = "", lead_snapshot: dict | None = None) -> str:
     """
     Generate an opener without speaking or mutating conversation state.
     Used for pre-call preparation so we can start talking immediately when the call connects.
@@ -165,6 +186,19 @@ def generate_opener(context_text: str = "", hint_text: str = "") -> str:
         messages.append({"role": "user", "content": context_text})
     if hint_text:
         messages.append({"role": "user", "content": "[FLOW HINT]\n" + hint_text})
+    if lead_snapshot:
+        brief = persona.opener_brief(lead_snapshot)
+        if brief:
+            messages.append({"role":"user","content":"[OPENER PERSONALIZATION]\n"+brief})
+    messages.append({
+        "role": "user",
+        "content": ("Checklist for your opener:\n"
+                    "1) Mention the contact or company by name.\n"
+                    "2) Mention the city/state or industry detail.\n"
+                    "3) Explain in one sentence why you called (tie to their role/industry).\n"
+                    "4) Ask a short open-ended question that invites them to talk.\n"
+                    "Do not continue until you have hit all four points.")
+    })
     messages.append({"role": "user", "content": "[START_CALL]"})
 
     try:
@@ -185,16 +219,16 @@ def generate_opener(context_text: str = "", hint_text: str = "") -> str:
         return shape_for_tts(default_opener())
 
 def _assemble_messages():
-    msgs = [{"role":"system","content":SYSTEM_PROMPT}, *store.conv.load()]
+    history = store.conv.load()
+    msgs = [{"role":"system","content":SYSTEM_PROMPT}, *history]
+    try:
+        conv_key = getattr(store.conv, "key", "conv")
+    except Exception:
+        conv_key = "conv"
     context = (_context_provider() or "").strip()
     # Send context once per unique context blob (new lead ⇒ new hash).
     if context:
         h = hashlib.sha256(context.encode("utf-8")).hexdigest()
-        # Ensure per-conversation context injection: include conv key
-        try:
-            conv_key = getattr(store.conv, "key", "conv")
-        except Exception:
-            conv_key = "conv"
         context_key = f"ctxsent:{conv_key}:{h}"
         try: already = rds.get(context_key)
         except Exception: already = None
@@ -207,6 +241,99 @@ def _assemble_messages():
     hint = (_hint_provider() or "").strip()
     if hint:
         msgs.append({"role":"user","content":"[FLOW HINT]\n"+hint})
+    guide = callplaybook.guidelines_block()
+    if guide:
+        send = True
+        ghash = callplaybook.guidelines_hash()
+        guide_key = f"callguide:{conv_key}:{ghash}" if ghash else None
+        if guide_key:
+            try:
+                if rds.get(guide_key):
+                    send = False
+            except Exception:
+                pass
+        if send:
+            msgs.append({"role":"user","content":"[CALL GUIDELINES]\n"+guide})
+            if guide_key:
+                try: rds.setex(guide_key, 3600, "1")
+                except Exception: pass
+    persona_txt = persona.persona_block()
+    if persona_txt:
+        send = True
+        persona_key = f"persona:{conv_key}"
+        try:
+            if rds.get(persona_key):
+                send = False
+        except Exception:
+            pass
+        if send:
+            msgs.append({"role":"user","content":"[PERSONA RULES]\n"+persona_txt})
+            try: rds.setex(persona_key, 3600, "1")
+            except Exception: pass
+    plan = persona.flow_plan()
+
+    def stage_idx_for(name: str, default: int = 0) -> int:
+        if not plan:
+            return default
+        try:
+            return plan.index(name)
+        except ValueError:
+            return default
+
+    stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+    if stage_id:
+        hint = persona.stage_hint(stage_id)
+        if hint:
+            msgs.append({"role":"user","content":"[CALL STAGE]\n"+hint})
+        question = persona.stage_question(stage_id)
+        if question:
+            flow_state.record_question(question)
+            msgs.append({"role":"user","content":"[SUGGESTED QUESTION]\nAsk something like: " + question})
+    snapshot = lead_context.get_current_snapshot()
+    lead_facts = persona.lead_fact_snippet(snapshot.get("lead"))
+    if lead_facts:
+        msgs.append({"role":"user","content":"[LEAD FACTS]\n"+lead_facts})
+    last_user_text = ""
+    for item in reversed(history):
+        if item.get("role") == "user":
+            last_user_text = (item.get("content") or "").strip()
+            break
+    if last_user_text:
+        snippet = last_user_text[-400:]
+        text_lower = last_user_text.lower()
+        if stage_id == "rapport":
+            flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("discovery_qualify", 1)))
+            stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+        if stage_id in ("discovery_qualify", "value_presentation", "objection_handling"):
+            if len(last_user_text) > 12:
+                flow_state.increment_discovery()
+                if stage_id == "discovery_qualify" and flow_state.discovery_count() >= 1:
+                    flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("value_presentation", 3)))
+                elif stage_id == "value_presentation" and flow_state.discovery_count() >= 2:
+                    flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("objection_handling", 4)))
+                elif stage_id == "objection_handling" and flow_state.discovery_count() >= 2 and flow_state.is_close_ready():
+                    flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("close_cta", 5)))
+                stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+        if any(cue in text_lower for cue in POSITIVE_CLOSE_CUES):
+            flow_state.mark_close_ready()
+            if stage_id == "objection_handling" and flow_state.discovery_count() >= 1:
+                flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("close_cta", 5)))
+                stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+        summary_instruction = (f"The user just said: \"{snippet}\". Restate that in your own words and acknowledge how it feels.")
+        if stage_id in ("discovery_qualify", "value_presentation"):
+            summary_instruction += " Then ask an open question (who/what/how) to uncover a bottleneck or pain."
+        elif stage_id == "objection_handling":
+            summary_instruction += " Empathize and ask a gentle clarifier so they keep talking."
+        elif stage_id == "close_cta":
+            summary_instruction += " Explain in one sentence how we help (AI automation, web/app, cloud/data) and ask them to share one challenge you'd focus on; then suggest a quick chat later today or tomorrow and ask what time works."
+        else:
+            summary_instruction += " Follow with a curious, open-ended question."
+        msgs.append({"role":"user","content":f"[SUMMARY CUE]\n{summary_instruction}"})
+    import json as _json
+    try:
+        print("[LLM Prompt Preview] ", _json.dumps(msgs[-6:], indent=2))
+    except Exception:
+        pass
     return msgs
 
 # ===============================================================
@@ -221,6 +348,16 @@ def deepseek_reply(prompt: str) -> str:
     g = _end_call_checks(plow, prompt)
     if g is not None: return g
 
+    g = guards.uninterested_guard(prompt)
+    if g: return g
+    g = guards.time_guard(prompt)
+    if g: return g
+    g = guards.referral_guard(prompt)
+    if g: return g
+    g = guards.gatekeeper_guard(prompt)
+    if g: return g
+    g = guards.identity_guard(prompt)
+    if g: return g
     g = guards.location_guard(prompt)
     if g: return g
     g = guards.pitch_guard(prompt)
@@ -303,6 +440,16 @@ def deepseek_stream_and_speak(prompt: str) -> str:
     g = _end_call_checks(plow, prompt)
     if g is not None: return g
 
+    g = guards.uninterested_guard(prompt)
+    if g: return g
+    g = guards.time_guard(prompt)
+    if g: return g
+    g = guards.referral_guard(prompt)
+    if g: return g
+    g = guards.gatekeeper_guard(prompt)
+    if g: return g
+    g = guards.identity_guard(prompt)
+    if g: return g
     g = guards.location_guard(prompt)
     if g: return g
     g = guards.pitch_guard(prompt)

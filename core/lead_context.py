@@ -150,6 +150,14 @@ def set_current_lead(lead_row: dict | None, campaign_row: dict | None = None):
             "campaign": dict(campaign_row or {}) if campaign_row else None,
         }
 
+
+def get_current_snapshot():
+    with _LOCK:
+        return {
+            "lead": dict(_CURRENT.get("lead") or {}),
+            "campaign": dict(_CURRENT.get("campaign") or {}) if _CURRENT.get("campaign") else None,
+        }
+
 def _mask(s: str | None, keep_tail=4):
     if not s: return ""
     t = "".join(ch for ch in s if ch.isdigit())

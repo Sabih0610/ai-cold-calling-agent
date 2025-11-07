@@ -1,0 +1,39 @@
+{
+  "guidelines": [
+    "Contact the right person before every call. Ask for the decision-maker by name and confirm you are speaking with them.",
+    "Use the first ten seconds to prove there is value in staying on the line. Lead with the outcome you can deliver.",
+    "Keep the conversation personable and grounded in genuine curiosity. Reference shared details when possible.",
+    "Talk about the prospect more than yourself. Ask about their priorities, pressures, and current approach.",
+    "Stay goal-focused. Know whether you are booking a meeting, collecting info, or qualifying interest and gently steer back to that goal.",
+    "Use trigger events (new hires, launches, partnerships) to show relevance and timeliness.",
+    "Ask open-ended questions that start with who/what/where/when/how/why to keep them talking.",
+    "Avoid pitching too early. Discover a pain or confirming need before presenting a solution.",
+    "Be specific about the value you offer and the next steps you need.",
+    "Ask for referrals when someone says no or after a win—make it easy to introduce you.",
+    "Always leave a concise voicemail (<20s) that is friendly, personal, and creates curiosity without a hard sell."
+  ],
+  "tips": [
+    "Be an active listener—mirror key phrases back to show you heard them.",
+    "Set expectations immediately: who you are, why you called, and how long it takes.",
+    "Identify the prospect's pain points early so you can tailor the conversation.",
+    "Showcase what makes you different without dismissing competitors.",
+    "Ask thoughtful discovery questions to uncover day-to-day realities.",
+    "Share proof or stats that map directly to the pain they mention.",
+    "Leverage social proof such as testimonials or recognizable wins.",
+    "Explain the next step while you still have them engaged.",
+    "Plan strategic follow-ups and schedule them while you talk if possible.",
+    "Use technology (CRM, call logs, automations) to track every touch.",
+    "Call with timing that respects their workflow and industry rhythm.",
+    "Stay goal-focused—know what 'success' for this call looks like.",
+    "Be empathetic, especially if you interrupted something important.",
+    "Continuously improve by reviewing recordings and updating scripts."
+  ],
+  "scripts": {
+    "uninterested": "Hello, {{name}}. This is {{agent}} from {{company}}. I\u2019ll be brief\u2014{{specialty}} is what we do best. In just three minutes I can show how we help companies like yours {{value}} using {{feature_list}}. Does that sound fair?",
+    "stretch_prospect": "Hi {{name}}, this is {{agent}} from {{company}}. I was hoping to talk about {{topic}} if you have a minute. I speak with teams like yours all the time and they keep running into {{pain}}. How have you been managing that recently? (listen) Sounds like we could be helpful\u2014can we set up time next week to dig in?",
+    "gatekeeper": "Hi {{gatekeeper}}. My name is {{agent}} with {{company}}. I\u2019m looking to speak with {{prospect}} or whoever leads {{department}}. Would you mind transferring me or sharing the best number/email for them?",
+    "no_time": "Thanks for letting me know it\u2019s not a good moment. I can call back {{time}} unless there\u2019s a better window for you. It will only take a couple of minutes and I\u2019ll come prepared so it\u2019s worth it.",
+    "referral": "I completely understand, {{name}}. Before I let you go, is there anyone in your network who\u2019s battling {{pain}} and might value a quick chat with us? I\u2019d really appreciate an intro or even just their contact info. Either way, thank you for your time.",
+    "voicemail": "Hi {{name}}, this is {{agent}} with {{company}}. I\u2019ll be brief\u2014I noticed {{trigger}} and I have an idea that could help you {{outcome}}. Give me a call back at {{callback}} and I\u2019ll keep it under two minutes. Talk soon!"
+  }
+}

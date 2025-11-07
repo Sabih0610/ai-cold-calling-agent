@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Taylor, I saw Gamma Solutions is in Houston and works in e-commerce. what is your current deployment process like-is it mostly manual or automated?"
+  },
+  {
+    "role": "user",
+    "content": "Who are you and why are you giving me a call?"
+  },
+  {
+    "role": "assistant",
+    "content": "Totally fair question. I’m Emma with Cloumen—we build AI-powered outreach that handles first-touch calls and qualification so teams like yours stay focused on real conversations. I’d never share anything you tell me; I’m only here to spot whether we can actually help. Would it be okay if I ask a quick question about how your team handles follow-ups or qualification? What’s been the biggest time sink lately?"
+  },
+  {
+    "role": "user",
+    "content": "Yeah, go ahead."
+  },
+  {
+    "role": "assistant",
+    "content": "Got it, thanks for letting me ask. What is your current deployment process like-is it mostly manual or automated?"
+  },
+  {
+    "role": "user",
+    "content": "Yeah, it is automated right now. We handle our calls through AI, we handle our lead generation through AI. So yeah, most of the things are automated right now."
+  },
+  {
+    "role": "assistant",
+    "content": "I am having a connection issue. Can we try again in a moment?"
+  },
+  {
+    "role": "user",
+    "content": "I didn't get to repeat that again."
+  },
+  {
+    "role": "assistant",
+    "content": "No worries at all, I know how frustrating tech hiccups can be. What time is best?"
+  }
+]

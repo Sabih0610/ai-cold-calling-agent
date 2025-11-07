@@ -35,7 +35,7 @@ PIPER_EXE       = os.getenv("PIPER_EXE", "piper")
 PIPER_USE_CUDA  = os.getenv("PIPER_CUDA", "0") not in ("0", "false", "False")
 
 PIPER_CHUNK     = int(os.getenv("PIPER_CHUNK", "4096"))
-LENGTH_SCALE    = float(os.getenv("PIPER_LENGTH_SCALE", "0.95"))
+LENGTH_SCALE    = float(os.getenv("PIPER_LENGTH_SCALE", "1.08"))
 NOISE_SCALE     = float(os.getenv("PIPER_NOISE_SCALE",  "0.45"))
 NOISE_W         = float(os.getenv("PIPER_NOISE_W",      "0.55"))
 

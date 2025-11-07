@@ -2,6 +2,7 @@
 import os
 import io
 import csv
+import json
 from datetime import datetime
 from typing import Optional, List, Tuple
 
@@ -356,6 +357,97 @@ def calls(
             "page": page,
             "size": size,
             "total": total,
+        },
+    )
+
+
+def _load_transcript(basename: str) -> list[dict]:
+    if not basename:
+        return []
+    path = os.path.join(RECORDINGS_DIR, f"{basename}.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+@app.get("/conversations", response_class=HTMLResponse)
+def conversations(
+    request: Request,
+    campaign_id: Optional[int] = Query(None),
+    lead_id: Optional[int] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    where = ["ca.recording_url IS NOT NULL"]
+    params: List = []
+    if campaign_id:
+        where.append("ca.campaign_id=%s")
+        params.append(campaign_id)
+    if lead_id:
+        where.append("ca.lead_id=%s")
+        params.append(lead_id)
+    where_sql = " AND ".join(where) if where else "1=1"
+
+    rows = qa(
+        f"""
+        SELECT ca.id,
+               ca.lead_id,
+               ca.campaign_id,
+               ca.started_at,
+               ca.disposition,
+               ca.duration_sec,
+               ca.recording_url,
+               l.company,
+               l.contact,
+               l.phone_e164,
+               c.name AS campaign_name
+          FROM call_attempts ca
+          JOIN leads l ON l.id = ca.lead_id
+          JOIN campaigns c ON c.id = ca.campaign_id
+         WHERE {where_sql}
+         ORDER BY ca.started_at DESC
+         LIMIT %s
+        """,
+        params + [limit],
+    )
+
+    entries = []
+    for row in rows:
+        rec_url = row.get("recording_url") or ""
+        basename = ""
+        if rec_url:
+            basename = os.path.splitext(os.path.basename(rec_url))[0]
+        transcript = _load_transcript(basename)
+        entries.append(
+            {
+                "campaign_name": row.get("campaign_name"),
+                "lead_id": row.get("lead_id"),
+                "company": row.get("company"),
+                "contact": row.get("contact"),
+                "phone": row.get("phone_e164"),
+                "started_at": row.get("started_at"),
+                "disposition": row.get("disposition"),
+                "duration": row.get("duration_sec"),
+                "recording_url": rec_url,
+                "transcript": transcript,
+                "rec_basename": basename,
+            }
+        )
+
+    return templates.TemplateResponse(
+        "conversations.html",
+        {
+            "request": request,
+            "entries": entries,
+            "campaign_id": campaign_id,
+            "lead_id": lead_id,
+            "limit": limit,
         },
     )
 

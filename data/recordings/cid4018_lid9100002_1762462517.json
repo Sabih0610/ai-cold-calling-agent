@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "content": "[START_CALL]"
+  },
+  {
+    "role": "assistant",
+    "content": "Hi Skyler, this is Emma from Cloumen. What big ideas keep getting pushed because no one has time?"
+  },
+  {
+    "role": "user",
+    "content": "Well right now, like here, your automation..."
+  },
+  {
+    "role": "assistant",
+    "content": "Got it, so you are already thinking about automation. what is one task that eats up the most time right now?"
+  },
+  {
+    "role": "user",
+    "content": "You could say that it is a call like we aren't able to keep many calls if it's a B schedule."
+  },
+  {
+    "role": "assistant",
+    "content": "I hear that-missing calls when you are busy is frustrating. Would a quick look at your call flow help?"
+  }
+]
