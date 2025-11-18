@@ -1,3 +1,4 @@
+# core\recording.py
 import os
 import wave
 import threading

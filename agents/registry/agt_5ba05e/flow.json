@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "tone": "",
+    "style": ""
+  },
+  "sections": [
+    {
+      "id": "sec_5a96f6",
+      "title": "Intro",
+      "items": [
+        {
+          "type": "ask",
+          "text": "Hi {{contact}}, this is Emma from Cloumen. Am I speaking with you?"
+        },
+        {
+          "type": "ask",
+          "text": "If yes: Great, thanks for taking the time. I saw {{company}} in {{city}} working in {{industry}}. How are you handling customer intake and follow-ups right now?"
+        }
+      ]
+    },
+    {
+      "id": "sec_c31105",
+      "title": "Discovery",
+      "items": [
+        {
+          "type": "ask",
+          "text": "Ask: What part of your current process eats the most time today?"
+        },
+        {
+          "type": "ask",
+          "text": "Ask: Who on your team owns that workflow?"
+        },
+        {
+          "type": "ask",
+          "text": "Ask: If you could wave a wand and fix one bottleneck, what would it be?"
+        }
+      ]
+    },
+    {
+      "id": "sec_152024",
+      "title": "Value",
+      "items": [
+        {
+          "type": "say",
+          "text": "Say: We help teams like yours by capturing inbound calls, qualifying leads, and logging everything automatically so your staff can stay focused on solving customer problems."
+        },
+        {
+          "type": "ask",
+          "text": "Say: If our AI caught the repetitive call-and-data work, what would you have it tackle first?"
+        }
+      ]
+    },
+    {
+      "id": "sec_b22336",
+      "title": "Close",
+      "items": [
+        {
+          "type": "ask",
+          "text": "Say: Sounds like there is a fit. Let's book a short call with our solutions lead\u2014would later today or tomorrow work?"
+        },
+        {
+          "type": "ask",
+          "text": "If busy: No worries. What's a good email and time so I can send a recap and invite?"
+        }
+      ]
+    }
+  ],
+  "plan": [
+    "sec_5a96f6",
+    "sec_c31105",
+    "sec_152024",
+    "sec_b22336"
+  ]
+}

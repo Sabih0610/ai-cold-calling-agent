@@ -9,6 +9,12 @@ from dotenv import load_dotenv
 # Load env first so submodules see flags
 load_dotenv()
 
+LOG_CALL_EVENTS = os.getenv("LOG_CALL_EVENTS", "1") not in ("0","false","False")
+
+def _clog(msg):
+    if LOG_CALL_EVENTS:
+        print(msg)
+
 from core import store, stt, tts, llm, turn
 from core import lead_context
 from core import recording
@@ -91,7 +97,7 @@ class Runner:
             lead_context.set_current_lead(lead_raw, campaign_row=campaign_row)
             agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
             flow_titles = [s.get("title", "") for s in (self._flow.sections if self._flow else [])]
-            hint_text = self._flow.hint if self._flow else ""
+            hint_text = self._flow.hint() if self._flow else ""
             context_text = lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
             opener_text = llm.generate_opener(
                 context_text,
@@ -130,7 +136,7 @@ class Runner:
                             ensure_ascii=False,
                         )
                 except Exception as exc:
-                    print(f"[Prewarm] Failed to persist PCM: {exc}")
+                    _clog(f"[Prewarm] Failed to persist PCM: {exc}")
                     pcm_path = ""
                     text_path = ""
             prepared = {
@@ -159,7 +165,7 @@ class Runner:
                     lead_key = (prepared["campaign_id"], prepared["lead_id"])
                 self._prepared_cache[lead_key] = prepared
             if os.getenv("PREPARED_DEBUG", "0") == "1":
-                print(f"[Prewarm] Prepared opener campaign={campaign_id} lead={lead_key_val} pcm_bytes={len(pcm_bytes)} path={pcm_path or 'inline'}")
+                _clog(f"[Prewarm] Prepared opener campaign={campaign_id} lead={lead_key_val} pcm_bytes={len(pcm_bytes)} path={pcm_path or 'inline'}")
             return {
                 "status": "prepared",
                 "opener": opener_text,
@@ -176,11 +182,11 @@ class Runner:
         sink = os.getenv("AUDIO_SINK", "audiosocket").lower()
         src  = os.getenv("AUDIO_SOURCE", "mic").lower()
         if sink != "audiosocket" or src != "audiosocket":
-            print("[Opener] Telephony not active (sink/src). Opener loop idle.")
+            _clog("[Opener] Telephony not active (sink/src). Opener loop idle.")
             return
 
         arm_guard_ms = int(os.getenv("ARM_WAIT_GUARD_MS", "120"))
-        print("[Opener] Loop ready. Waiting for calls...")
+        _clog("[Opener] Loop ready. Waiting for calls...")
 
         while self._running and not store.STOP.is_set():
             # Disarm for the next call
@@ -270,14 +276,15 @@ class Runner:
                     flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
                     def _context_provider():
                         return lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
-                    llm.set_providers(_context_provider, (self._flow.hint if self._flow else None))
+                    hint_provider = (lambda: self._flow.hint() or "") if self._flow else None
+                    llm.set_providers(_context_provider, hint_provider)
             except Exception as e:
-                print(f"[Opener] Context wiring error: {e}")
+                _clog(f"[Opener] Context wiring error: {e}")
             try:
                 agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
                 flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
                 context_text = lead_context.build_context(script_context=agent_ctx, flow_titles=flow_titles)
-                hint_text = self._flow.hint if self._flow else ""
+                hint_text = self._flow.hint() if self._flow else ""
                 prepared_entry = None
                 ttl = float(os.getenv("PREPARED_OPENER_TTL", "180"))
                 with self._prepared_lock:
@@ -292,10 +299,10 @@ class Runner:
                     lead_key = (campaign_id, lead_id)
                     prepared_entry = self._prepared_cache.pop(lead_key, None)
                     if not prepared_entry and os.getenv("PREPARED_DEBUG", "0") == "1":
-                        print(f"[Opener] Cache miss for campaign={campaign_id} lead={lead_id}; cached keys={list(self._prepared_cache.keys())}")
+                        _clog(f"[Opener] Cache miss for campaign={campaign_id} lead={lead_id}; cached keys={list(self._prepared_cache.keys())}")
 
                 if prepared_entry:
-                    print("[Opener] Bridge detected. Using prepared opener.")
+                    _clog("[Opener] Bridge detected. Using prepared opener.")
                     opener_text = prepared_entry.get("opener") or llm.default_opener()
                     try:
                         store.conv.append("user", "[START_CALL]")
@@ -314,7 +321,7 @@ class Runner:
                             with open(pcm_path, "rb") as f:
                                 pcm_bytes = f.read()
                         except Exception as exc:
-                            print(f"[Opener] Failed to read prepared PCM: {exc}")
+                            _clog(f"[Opener] Failed to read prepared PCM: {exc}")
                         try:
                             os.remove(pcm_path)
                         except Exception:
@@ -335,7 +342,7 @@ class Runner:
                     except Exception:
                         pass
                     flow_state.set_stage(1)
-                    print("[Opener] Prepared opener sent.")
+                    _clog("[Opener] Prepared opener sent.")
                 else:
                     disk_pcm_path = os.path.join(
                         self._prepared_dir,
@@ -357,10 +364,10 @@ class Runner:
                                         meta = json.load(tf)
                                     opener_text = meta.get("opener")
                                 except Exception as exc:
-                                    print(f"[Opener] Failed to read opener metadata: {exc}")
+                                    _clog(f"[Opener] Failed to read opener metadata: {exc}")
                             if not opener_text:
                                 opener_text = llm.default_opener()
-                            print("[Opener] Bridge detected. Using disk-prepared opener.")
+                            _clog("[Opener] Bridge detected. Using disk-prepared opener.")
                             try:
                                 store.conv.append("user", "[START_CALL]")
                                 store.enqueue_turn("user", "[START_CALL]")
@@ -384,14 +391,14 @@ class Runner:
                                 llm._first_turn_done = True
                             except Exception:
                                 pass
-                            print("[Opener] Disk-prepared opener sent.")
+                            _clog("[Opener] Disk-prepared opener sent.")
                             flow_state.set_stage(1)
                             continue
                         except Exception as exc:
-                            print(f"[Opener] Failed to use disk opener: {exc}")
+                            _clog(f"[Opener] Failed to use disk opener: {exc}")
                     if os.getenv("PREPARED_DEBUG", "0") == "1":
-                        print(f"[Opener] Prepared opener missing for campaign={campaign_id} lead={lead_id}; falling back to live generation.")
-                    print("[Opener] Bridge detected. Generating opener via LLM...")
+                        _clog(f"[Opener] Prepared opener missing for campaign={campaign_id} lead={lead_id}; falling back to live generation.")
+                    _clog("[Opener] Bridge detected. Generating opener via LLM...")
                     lead_snapshot = (lead_payload or {}).get("lead_full_raw") if 'lead_payload' in locals() else None
                     opener_text = llm.generate_opener(context_text, hint_text, lead_snapshot=lead_snapshot) or llm.default_opener()
                     try:
@@ -406,18 +413,18 @@ class Runner:
                     _speak(opener_text)
                     flow_state.set_stage(1)
                     turn.touch_activity()
-                    print("[Opener] LLM opener sent.")
+                    _clog("[Opener] LLM opener sent.")
             except Exception as e:
-                print(f"[Opener] ERROR while speaking opener: {e}")
+                _clog(f"[Opener] ERROR while speaking opener: {e}")
             finally:
-                print("[Opener] STT already armed for first user turn.")
+                _clog("[Opener] STT already armed for first user turn.")
                 time.sleep(arm_guard_ms / 1000.0)
 
             # Wait for hangup before next cycle
             while audiosocket_ready.is_set() and self._running and not store.STOP.is_set():
                 time.sleep(0.05)
 
-            print("[Opener] Call ended. Waiting for the next call...")
+            _clog("[Opener] Call ended. Waiting for the next call...")
             turn.touch_activity()
             transcript = []
             try:
@@ -518,7 +525,10 @@ class Runner:
                             store.open_new_session()
                             agent_ctx = (self._active_agent.get("context") if self._active_agent else "") or ""
                             flow_titles = [s.get("title","") for s in (self._flow.sections if self._flow else [])]
-                            llm.set_providers(lambda: lead_context.build_context(agent_ctx, flow_titles), (self._flow.hint if self._flow else None))
+                            llm.set_providers(
+                                lambda: lead_context.build_context(agent_ctx, flow_titles),
+                                (lambda: self._flow.hint() or "") if self._flow else None
+                            )
             except Exception:
                 pass
             llm.deepseek_stream_and_speak("[START_CALL]")

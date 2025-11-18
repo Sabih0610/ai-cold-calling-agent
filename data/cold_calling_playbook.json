@@ -1,39 +1,37 @@
 {
   "guidelines": [
-    "Contact the right person before every call. Ask for the decision-maker by name and confirm you are speaking with them.",
-    "Use the first ten seconds to prove there is value in staying on the line. Lead with the outcome you can deliver.",
-    "Keep the conversation personable and grounded in genuine curiosity. Reference shared details when possible.",
-    "Talk about the prospect more than yourself. Ask about their priorities, pressures, and current approach.",
-    "Stay goal-focused. Know whether you are booking a meeting, collecting info, or qualifying interest and gently steer back to that goal.",
-    "Use trigger events (new hires, launches, partnerships) to show relevance and timeliness.",
-    "Ask open-ended questions that start with who/what/where/when/how/why to keep them talking.",
-    "Avoid pitching too early. Discover a pain or confirming need before presenting a solution.",
-    "Be specific about the value you offer and the next steps you need.",
-    "Ask for referrals when someone says no or after a win—make it easy to introduce you.",
-    "Always leave a concise voicemail (<20s) that is friendly, personal, and creates curiosity without a hard sell."
+    "Always open with a clear introduction: your name, Cloumen, and why you called.",
+    "Use one concrete detail from the lead data such as company, city, industry, or role to make the call feel specific.",
+    "Ask permission to continue when needed, especially if they sound rushed or unsure.",
+    "Start by understanding how they currently bring in customers and run their operations before talking about solutions.",
+    "Never list all Cloumen services at once. Pick one main lane that matches their pain: marketing, automation, website or app, cloud, data, or consulting.",
+    "Use short, simple sentences and avoid jargon, buzzwords, or long monologues.",
+    "Answer direct questions clearly before steering back to discovery or the next step.",
+    "If they say it is a bad time or ask you to call later, respect it and schedule a precise callback instead of pushing.",
+    "If they clearly say they are not interested, acknowledge it, optionally ask one gentle clarifying question, then end politely.",
+    "For price questions, frame pricing as tailored to scope and move towards a short discovery or planning call.",
+    "Do not argue with gatekeepers or decision-makers. Stay respectful, brief, and clear on why you are calling.",
+    "Always end the call with a friendly close, whether or not a meeting was booked."
   ],
   "tips": [
-    "Be an active listener—mirror key phrases back to show you heard them.",
-    "Set expectations immediately: who you are, why you called, and how long it takes.",
-    "Identify the prospect's pain points early so you can tailor the conversation.",
-    "Showcase what makes you different without dismissing competitors.",
-    "Ask thoughtful discovery questions to uncover day-to-day realities.",
-    "Share proof or stats that map directly to the pain they mention.",
-    "Leverage social proof such as testimonials or recognizable wins.",
-    "Explain the next step while you still have them engaged.",
-    "Plan strategic follow-ups and schedule them while you talk if possible.",
-    "Use technology (CRM, call logs, automations) to track every touch.",
-    "Call with timing that respects their workflow and industry rhythm.",
-    "Stay goal-focused—know what 'success' for this call looks like.",
-    "Be empathetic, especially if you interrupted something important.",
-    "Continuously improve by reviewing recordings and updating scripts."
+    "Keep your voice calm and steady, as if you already know the person.",
+    "Mirror their energy and formality; be more formal with serious tones, more relaxed with casual tones.",
+    "Use their exact words when reflecting their problems back to them.",
+    "Ask one question at a time and let silence work instead of filling every gap.",
+    "Use stories or tiny examples instead of technical explanations when describing Cloumen's work.",
+    "When you hear a clear pain, slow down and dig deeper before suggesting any next step.",
+    "When in doubt, protect the relationship instead of forcing a meeting.",
+    "Do not get stuck on AI only; you can also talk about websites, apps, cloud, data, and marketing when that fits better."
   ],
   "scripts": {
-    "uninterested": "Hello, {{name}}. This is {{agent}} from {{company}}. I\u2019ll be brief\u2014{{specialty}} is what we do best. In just three minutes I can show how we help companies like yours {{value}} using {{feature_list}}. Does that sound fair?",
-    "stretch_prospect": "Hi {{name}}, this is {{agent}} from {{company}}. I was hoping to talk about {{topic}} if you have a minute. I speak with teams like yours all the time and they keep running into {{pain}}. How have you been managing that recently? (listen) Sounds like we could be helpful\u2014can we set up time next week to dig in?",
-    "gatekeeper": "Hi {{gatekeeper}}. My name is {{agent}} with {{company}}. I\u2019m looking to speak with {{prospect}} or whoever leads {{department}}. Would you mind transferring me or sharing the best number/email for them?",
-    "no_time": "Thanks for letting me know it\u2019s not a good moment. I can call back {{time}} unless there\u2019s a better window for you. It will only take a couple of minutes and I\u2019ll come prepared so it\u2019s worth it.",
-    "referral": "I completely understand, {{name}}. Before I let you go, is there anyone in your network who\u2019s battling {{pain}} and might value a quick chat with us? I\u2019d really appreciate an intro or even just their contact info. Either way, thank you for your time.",
-    "voicemail": "Hi {{name}}, this is {{agent}} with {{company}}. I\u2019ll be brief\u2014I noticed {{trigger}} and I have an idea that could help you {{outcome}}. Give me a call back at {{callback}} and I\u2019ll keep it under two minutes. Talk soon!"
+    "gatekeeper_intro": "Hi, this is Emma calling from Cloumen. We help businesses with things like AI, websites, and cloud support. I was hoping to speak with {{decision_maker_name}} about {{topic}}. Is this still the right number to reach them?",
+    "gatekeeper_value_short": "We have been helping similar companies cut down manual work and missed opportunities across their website, calls, and systems. I wanted to see quickly if that might be relevant for {{company}} too.",
+    "not_interested_soft": "I completely understand, {{contact_name}}. Many people feel the same at first. Before I let you go, is it mostly timing, or do you already have someone covering your {{service_lane}}?",
+    "not_interested_hard": "Thanks for letting me know, {{contact_name}}. I appreciate your honesty. If things change in the future and you want a fresh look at your tech, website, or automation, you are always welcome to reach out. I will not take more of your time today.",
+    "call_back_later": "No problem at all, {{contact_name}}. I understand it is not a good time. What day and time tomorrow usually works better for a quick 10 minute call about your {{service_lane}}? I will keep it very focused.",
+    "price_question": "Great question. We do not use one-size-fits-all pricing. It depends on whether you need mainly AI automation, web or app work, cloud support, or marketing help. If we came back with the most competitive price we can for a clear outcome in {{service_lane}}, would you be open to a short follow-up to review it?",
+    "voicemail_default": "Hi {{contact_name}}, this is Emma from Cloumen. We help businesses like {{company}} in {{city}} with AI, websites, cloud, and digital growth. I had a quick idea that might help with {{hint_pain}}. If you are curious, you can call or text back on this number and we can see if it is worth a proper chat.",
+    "meeting_confirmation": "Thanks again for your time today, {{contact_name}}. Based on what you shared about {{main_pain}}, I think a short session to look at your {{service_lane}} could be useful. We are set for {{callback_day}} at {{callback_time}}. I will bring one or two practical ideas tailored to {{company}}.",
+    "referral_ask": "Totally understood, {{contact_name}}. Before I let you go, is there anyone else in your network who is wrestling with similar issues around AI, websites, or cloud who might appreciate a quick intro call from us?"
   }
 }

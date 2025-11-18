@@ -24,3 +24,9 @@ voices/
 # Large files
 asterik/wsl/images/*.tar.gz
 asterik/wsl/images/*.rootfs.tar.gz
+
+# Exclude runtime recordings (avoid committing large audio/raw files)
+data/recordings/
+data/recordings/*.wav
+data/recordings/*.raw
+data/recordings/*.json

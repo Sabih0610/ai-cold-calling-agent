@@ -35,6 +35,14 @@ AMI_PASS = os.getenv("AMI_PASS", "SuperAMI123!")
 PREWARM_URL = os.getenv("VOICE_PREWARM_URL", "http://127.0.0.1:8000/prewarm")
 PREWARM_TIMEOUT = float(os.getenv("VOICE_PREWARM_TIMEOUT", "10"))
 PREWARM_API_KEY = os.getenv("VOICE_PREWARM_KEY", os.getenv("API_KEY", ""))
+PREWARM_REQUIRE_READY = os.getenv("PREWARM_REQUIRE_READY", "1") not in ("0", "false", "False")
+
+# Prevent new outbound attempts while a live channel is still bridged
+WAIT_FOR_ACTIVE_CALL = os.getenv("WAIT_FOR_ACTIVE_CALL", "1") not in ("0", "false", "False")
+ACTIVE_CALL_PATTERNS = tuple(
+    p.strip() for p in os.getenv("ACTIVE_CALL_PATTERNS", "PJSIP/1001,Local/7000,Local/7100").split(",") if p.strip()
+)
+ACTIVE_CALL_POLL_SEC = float(os.getenv("ACTIVE_CALL_POLL_SEC", "0.75"))
 
 # Context dir (AI reads JSON here)
 CTX_DIR = os.getenv("CTX_DIR", "/var/tmp/dialer_ctx")
@@ -401,6 +409,7 @@ def originate_once(cur, cfg, job):
     ctx_path     = write_context_json(ctx_payload, rec_basename)
     ctx_path_var = ctx_path.replace("\\", "/")
 
+    prewarm_result = {}
     if PREWARM_URL:
         prewarm_body = {
             "campaign_id": campaign_id,
@@ -420,8 +429,18 @@ def originate_once(cur, cfg, job):
             )
             if os.getenv("PREPARED_DEBUG", "0") == "1":
                 print(f"[Dialer] Prewarm response {resp.status_code}: {resp.text[:200]}")
-            if resp.status_code >= 400:
-                raise RuntimeError(f"Prewarm HTTP {resp.status_code}: {resp.text}")
+            resp.raise_for_status()
+            try:
+                prewarm_result = resp.json() or {}
+            except ValueError:
+                prewarm_result = {}
+            if PREWARM_REQUIRE_READY and prewarm_result.get("status") != "prepared":
+                reason = prewarm_result.get("reason") or "prewarm-not-prepared"
+                print(f"[Dialer] Prewarm did not prepare opener for lead {lead_id}: {reason}")
+                notes = f"prewarm_status={prewarm_result.get('status')} reason={reason}"
+                log_attempt(cur, lead_id, campaign_id, "PREWARM_FAILED", duration=0, rec_url=None, notes=notes)
+                schedule_next(cur, lead_id, campaign_id, "FAILED", mode, test_redial_sec)
+                return
         except Exception as exc:
             if os.getenv("VOICE_PREWARM_SILENT", "0") != "1":
                 print(f"[Dialer] Prewarm call failed: {exc}")
@@ -493,6 +512,27 @@ def worker_loop(cid: int, selection: str, every: int | None, threads: int):
     """
     def _thread_main(idx: int):
         name = f"W{idx}"
+        monitor_ami = None
+
+        def ensure_monitor():
+            nonlocal monitor_ami
+            if monitor_ami is None:
+                try:
+                    monitor_ami = ami_login()
+                except Exception as exc:
+                    print(f"[{name}] Monitor AMI login failed: {exc}")
+                    monitor_ami = None
+            return monitor_ami
+
+        def close_monitor():
+            nonlocal monitor_ami
+            if monitor_ami:
+                try:
+                    monitor_ami.close()
+                except Exception:
+                    pass
+                monitor_ami = None
+
         while not _stop_flag:
             try:
                 with db_connect() as conn, conn.cursor() as cur:
@@ -508,6 +548,32 @@ def worker_loop(cid: int, selection: str, every: int | None, threads: int):
 
                     # read config + optional unpark
                     cfg = get_cfg_map(cur)
+
+                    # Allow .env overrides without touching the DB config rows
+                    env_overrides = {
+                        "DIAL_MODE": os.getenv("DIAL_MODE"),
+                        "DIAL_STRING_TEST": os.getenv("DIAL_STRING_TEST"),
+                        "DIAL_STRING_LIVE": os.getenv("DIAL_STRING_LIVE"),
+                    }
+                    for key, val in env_overrides.items():
+                        if val not in (None, ""):
+                            cfg[key] = val
+
+                    if WAIT_FOR_ACTIVE_CALL:
+                        monitor = ensure_monitor()
+                        if monitor is None:
+                            time.sleep(ACTIVE_CALL_POLL_SEC)
+                            continue
+                        try:
+                            if any_active_voice_channel(monitor, patterns=ACTIVE_CALL_PATTERNS):
+                                time.sleep(ACTIVE_CALL_POLL_SEC)
+                                continue
+                        except Exception as exc:
+                            print(f"[{name}] Monitor check failed: {exc}")
+                            close_monitor()
+                            time.sleep(ACTIVE_CALL_POLL_SEC)
+                            continue
+
                     # Optional: prime if queue looks empty after a claim miss
                     job = claim_one(cur, cid, selection, every)
                     if not job:
@@ -540,6 +606,7 @@ def worker_loop(cid: int, selection: str, every: int | None, threads: int):
             except Exception as e:
                 print(f"[{name}] Error: {e}")
                 time.sleep(0.5)
+        close_monitor()
 
     threads = max(1, int(threads))
     ts = []

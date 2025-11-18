@@ -1,4 +1,4 @@
-#core\llm.py
+# core/llm.py
 import os, time, hashlib, threading, queue
 from typing import Optional, Callable
 import hashlib
@@ -7,6 +7,7 @@ from rapidfuzz import fuzz
 from core.prompts import SYSTEM_PROMPT
 from core.utils import normalize_text, shape_for_tts
 from core import store
+from core import tts
 from core.tts import speak, tts_playing
 from core import turn
 from core import guards
@@ -26,9 +27,9 @@ LLM_DEBOUNCE_WINDOW_MS = int(os.getenv("LLM_DEBOUNCE_WINDOW_MS", "1000"))
 LLM_DEBOUNCE_SIM       = int(os.getenv("LLM_DEBOUNCE_SIM", "92"))
 LLM_RECENT_TTL_SEC     = float(os.getenv("LLM_RECENT_TTL_SEC", "3.0"))
 
-STREAM_FLUSH_ON_PUNCT_ONLY = os.getenv("STREAM_FLUSH_ON_PUNCT_ONLY","1") not in ("0","false","False")
-STREAM_FIRST_FLUSH_CHARS = int(os.getenv("STREAM_FIRST_FLUSH_CHARS","0"))
-STREAM_BUFFER_FLUSH_CHARS = int(os.getenv("STREAM_BUFFER_FLUSH_CHARS","0"))
+STREAM_FLUSH_ON_PUNCT_ONLY = os.getenv("STREAM_FLUSH_ON_PUNCT_ONLY", "1") not in ("0", "false", "False")
+STREAM_FIRST_FLUSH_CHARS   = int(os.getenv("STREAM_FIRST_FLUSH_CHARS", "0"))
+STREAM_BUFFER_FLUSH_CHARS  = int(os.getenv("STREAM_BUFFER_FLUSH_CHARS", "0"))
 
 _context_provider: Callable[[], str] = lambda: ""
 _hint_provider: Callable[[], str] = lambda: ""
@@ -52,6 +53,28 @@ POSITIVE_CLOSE_CUES = (
     "that would be good",
 )
 
+RESCHEDULE_CUES = (
+    "call me tomorrow",
+    "contact me tomorrow",
+    "call back tomorrow",
+    "call tomorrow",
+    "reach me tomorrow",
+    "tomorrow would be better",
+    "tomorrow is better",
+)
+
+HARD_NO_CUES = (
+    "i don't want to talk",
+    "i do not want to talk",
+    "dont want to talk",
+    "don't want to talk to you",
+    "do not want to talk to you",
+    "not interested",
+    "no interest",
+    "stop calling",
+    "leave me alone",
+)
+
 # ===============================================================
 # Providers Setup
 # ===============================================================
@@ -68,10 +91,17 @@ LLM_LOCK = threading.Lock()
 _last_enq_text = ""
 _last_enq_ts = 0.0
 _recent_texts = []
+_partial_lock = threading.Lock()
+_partial_seq = 0
+_latest_partial = ""
+
 
 def _similar(a: str, b: str) -> int:
-    try: return fuzz.ratio(a, b)
-    except Exception: return 0
+    try:
+        return fuzz.ratio(a, b)
+    except Exception:
+        return 0
+
 
 def _accept_against_recent(text: str) -> bool:
     now = time.time()
@@ -83,16 +113,20 @@ def _accept_against_recent(text: str) -> bool:
     _recent_texts.append((now, text))
     return True
 
+
 def enqueue_user_text(text: str):
     global _last_enq_text, _last_enq_ts
     s = (text or "").strip()
-    if not s: return
+    if not s:
+        return
     now = time.time()
     if _last_enq_text and (now - _last_enq_ts) * 1000.0 < LLM_DEBOUNCE_WINDOW_MS:
         if _similar(s.lower(), _last_enq_text.lower()) >= LLM_DEBOUNCE_SIM:
             return
-    if not _accept_against_recent(s): return
-    _last_enq_text = s; _last_enq_ts = now
+    if not _accept_against_recent(s):
+        return
+    _last_enq_text = s
+    _last_enq_ts = now
     try:
         while True:
             llm_queue.get_nowait()
@@ -101,27 +135,64 @@ def enqueue_user_text(text: str):
         pass
     llm_queue.put(s)
 
+
+def update_partial_transcript(text: str, is_final: bool = False):
+    """Broadcast live ASR partials so downstream consumers/UX can react quickly."""
+    global _partial_seq, _latest_partial
+    payload_text = (text or "").strip()
+    with _partial_lock:
+        if is_final:
+            if not payload_text and not _latest_partial:
+                return
+            seq = _partial_seq
+            _latest_partial = ""
+        else:
+            if not payload_text or payload_text == _latest_partial:
+                return
+            _partial_seq += 1
+            seq = _partial_seq
+            _latest_partial = payload_text
+    store.publish_event(
+        {
+            "type": "user_partial",
+            "text": payload_text,
+            "seq": seq,
+            "final": bool(is_final),
+            "ts": time.time(),
+        }
+    )
+
 # ===============================================================
 # End-call Guards
 # ===============================================================
-END_CALL_STRICT = os.getenv("END_CALL_STRICT","1") not in ("0","false","False")
-EXACT_END_PHRASE = os.getenv("EXACT_END_PHRASE","end call now").strip().lower()
-END_CALL_PHRASES = [p.strip().lower() for p in os.getenv(
-    "END_CALL_PHRASES",
-    "goodbye,bye,that will be all,that's all,hang up,thanks that's it,thank you that's it,end call,please disconnect,quit,exit,done"
-).split(",") if p.strip()]
+END_CALL_STRICT = os.getenv("END_CALL_STRICT", "1") not in ("0", "false", "False")
+EXACT_END_PHRASE = os.getenv("EXACT_END_PHRASE", "end call now").strip().lower()
+END_CALL_PHRASES = [
+    p.strip().lower()
+    for p in os.getenv(
+        "END_CALL_PHRASES",
+        "goodbye,bye,that will be all,that's all,hang up,thanks that's it,thank you that's it,end call,please disconnect,quit,exit,done",
+    ).split(",")
+    if p.strip()
+]
+
 
 def _end_call_checks(plow: str, original_text: str) -> Optional[str]:
     if END_CALL_STRICT:
         if EXACT_END_PHRASE and EXACT_END_PHRASE in plow:
             reply = "Understood. Ending the call now."
-            store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+            store.conv.append("assistant", reply)
+            store.enqueue_turn("assistant", reply)
             speak(reply, user_text_for_name_detect=original_text)
             store.set_stop("explicit_end_phrase")
             return reply
         if any(p in plow for p in END_CALL_PHRASES):
-            reply = f"If you want me to end the call, please say exactly: {EXACT_END_PHRASE}. Otherwise, how can I help?"
-            store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+            reply = (
+                f"If you want me to end the call, please say exactly: {EXACT_END_PHRASE}. "
+                "Otherwise, how can I help?"
+            )
+            store.conv.append("assistant", reply)
+            store.enqueue_turn("assistant", reply)
             speak(reply, user_text_for_name_detect=original_text)
             return reply
     return None
@@ -167,17 +238,17 @@ def _best_memory_match(norm: str) -> Optional[str]:
 # ===============================================================
 # Conversation Helpers
 # ===============================================================
-def default_opener():
-    return ("Hi there, this is Emma from Cloumen. We partner with local teams to keep their customer journey smooth and personal. "
-            "What's one part of your day-to-day operations that still feels slower than it should?")
+def default_opener() -> str:
+    return shape_for_tts(
+        "Hi, this is Emma from Cloumen. We help local teams with things like websites, automation, AI, and marketing. "
+        "What part of your day-to-day work still feels slower or messier than it should?"
+    )
+
 
 def generate_opener(context_text: str = "", hint_text: str = "", lead_snapshot: dict | None = None) -> str:
-    """
-    Generate an opener without speaking or mutating conversation state.
-    Used for pre-call preparation so we can start talking immediately when the call connects.
-    """
+    """Generate an opener without speaking or mutating conversation state."""
     if not client:
-        return shape_for_tts(default_opener())
+        return default_opener()
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     context_text = (context_text or "").strip()
@@ -189,16 +260,20 @@ def generate_opener(context_text: str = "", hint_text: str = "", lead_snapshot: 
     if lead_snapshot:
         brief = persona.opener_brief(lead_snapshot)
         if brief:
-            messages.append({"role":"user","content":"[OPENER PERSONALIZATION]\n"+brief})
-    messages.append({
-        "role": "user",
-        "content": ("Checklist for your opener:\n"
-                    "1) Mention the contact or company by name.\n"
-                    "2) Mention the city/state or industry detail.\n"
-                    "3) Explain in one sentence why you called (tie to their role/industry).\n"
-                    "4) Ask a short open-ended question that invites them to talk.\n"
-                    "Do not continue until you have hit all four points.")
-    })
+            messages.append({"role": "user", "content": "[OPENER PERSONALIZATION]\n" + brief})
+    messages.append(
+        {
+            "role": "user",
+            "content": (
+                "Checklist for your opener:\n"
+                "1) Greet them by name and mention one concrete detail (company, city, role, or industry).\n"
+                "2) In one short sentence, say why you are calling that could matter to them, "
+                "hinting that you help with AI, websites, cloud, data, marketing, or consulting without listing everything.\n"
+                "3) Ask one short open question that helps you discover what area matters most to them right now.\n"
+                "Do not continue until you have hit all three points."
+            ),
+        }
+    )
     messages.append({"role": "user", "content": "[START_CALL]"})
 
     try:
@@ -216,31 +291,39 @@ def generate_opener(context_text: str = "", hint_text: str = "", lead_snapshot: 
         return shape_for_tts(raw)
     except Exception as e:
         print(f"⚠️ DeepSeek opener generation error: {e}")
-        return shape_for_tts(default_opener())
+        return default_opener()
+
 
 def _assemble_messages():
     history = store.conv.load()
-    msgs = [{"role":"system","content":SYSTEM_PROMPT}, *history]
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
     try:
         conv_key = getattr(store.conv, "key", "conv")
     except Exception:
         conv_key = "conv"
+
+    # One-shot call / lead context
     context = (_context_provider() or "").strip()
-    # Send context once per unique context blob (new lead ⇒ new hash).
     if context:
         h = hashlib.sha256(context.encode("utf-8")).hexdigest()
         context_key = f"ctxsent:{conv_key}:{h}"
-        try: already = rds.get(context_key)
-        except Exception: already = None
+        try:
+            already = rds.get(context_key)
+        except Exception:
+            already = None
         if not already:
-            msgs.append({"role":"user","content":context})
-            try: rds.setex(context_key, 3600, "1")
-            except Exception: pass
+            msgs.append({"role": "user", "content": context})
+            try:
+                rds.setex(context_key, 3600, "1")
+            except Exception:
+                pass
 
-        
+    # Flow hint from higher-level planner
     hint = (_hint_provider() or "").strip()
     if hint:
-        msgs.append({"role":"user","content":"[FLOW HINT]\n"+hint})
+        msgs.append({"role": "user", "content": "[FLOW HINT]\n" + hint})
+
+    # Global guidelines (rarely change)
     guide = callplaybook.guidelines_block()
     if guide:
         send = True
@@ -253,10 +336,14 @@ def _assemble_messages():
             except Exception:
                 pass
         if send:
-            msgs.append({"role":"user","content":"[CALL GUIDELINES]\n"+guide})
+            msgs.append({"role": "user", "content": "[CALL GUIDELINES]\n" + guide})
             if guide_key:
-                try: rds.setex(guide_key, 3600, "1")
-                except Exception: pass
+                try:
+                    rds.setex(guide_key, 3600, "1")
+                except Exception:
+                    pass
+
+    # Persona block (tone, objectives, behaviors)
     persona_txt = persona.persona_block()
     if persona_txt:
         send = True
@@ -267,9 +354,13 @@ def _assemble_messages():
         except Exception:
             pass
         if send:
-            msgs.append({"role":"user","content":"[PERSONA RULES]\n"+persona_txt})
-            try: rds.setex(persona_key, 3600, "1")
-            except Exception: pass
+            msgs.append({"role": "user", "content": "[PERSONA RULES]\n" + persona_txt})
+            try:
+                rds.setex(persona_key, 3600, "1")
+            except Exception:
+                pass
+
+    # Flow stage and suggested question
     plan = persona.flow_plan()
 
     def stage_idx_for(name: str, default: int = 0) -> int:
@@ -282,28 +373,37 @@ def _assemble_messages():
 
     stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
     if stage_id:
-        hint = persona.stage_hint(stage_id)
-        if hint:
-            msgs.append({"role":"user","content":"[CALL STAGE]\n"+hint})
-        question = persona.stage_question(stage_id)
-        if question:
-            flow_state.record_question(question)
-            msgs.append({"role":"user","content":"[SUGGESTED QUESTION]\nAsk something like: " + question})
+        hint_txt = persona.stage_hint(stage_id)
+        if hint_txt:
+            msgs.append({"role": "user", "content": "[CALL STAGE]\n" + hint_txt})
+        q = persona.stage_question(stage_id)
+        if q:
+            flow_state.record_question(q)
+            msgs.append({"role": "user", "content": "[SUGGESTED QUESTION]\nAsk something like: " + q})
+
+    # Lead facts (company, city, role, etc.)
     snapshot = lead_context.get_current_snapshot()
     lead_facts = persona.lead_fact_snippet(snapshot.get("lead"))
     if lead_facts:
-        msgs.append({"role":"user","content":"[LEAD FACTS]\n"+lead_facts})
+        msgs.append({"role": "user", "content": "[LEAD FACTS]\n" + lead_facts})
+
+    # Summary cue based on the most recent user utterance
     last_user_text = ""
     for item in reversed(history):
         if item.get("role") == "user":
             last_user_text = (item.get("content") or "").strip()
             break
+
     if last_user_text:
         snippet = last_user_text[-400:]
         text_lower = last_user_text.lower()
+
+        # Stage progression driven by conversation depth and positive signals
         if stage_id == "rapport":
+            # Move into discovery once we have at least one user turn
             flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("discovery_qualify", 1)))
             stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+
         if stage_id in ("discovery_qualify", "value_presentation", "objection_handling"):
             if len(last_user_text) > 12:
                 flow_state.increment_discovery()
@@ -311,25 +411,63 @@ def _assemble_messages():
                     flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("value_presentation", 3)))
                 elif stage_id == "value_presentation" and flow_state.discovery_count() >= 2:
                     flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("objection_handling", 4)))
-                elif stage_id == "objection_handling" and flow_state.discovery_count() >= 2 and flow_state.is_close_ready():
+                elif (
+                    stage_id == "objection_handling"
+                    and flow_state.discovery_count() >= 2
+                    and flow_state.is_close_ready()
+                ):
                     flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("close_cta", 5)))
                 stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
+
         if any(cue in text_lower for cue in POSITIVE_CLOSE_CUES):
             flow_state.mark_close_ready()
             if stage_id == "objection_handling" and flow_state.discovery_count() >= 1:
                 flow_state.set_stage(max(flow_state.current_stage_idx(), stage_idx_for("close_cta", 5)))
                 stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
-        summary_instruction = (f"The user just said: \"{snippet}\". Restate that in your own words and acknowledge how it feels.")
-        if stage_id in ("discovery_qualify", "value_presentation"):
-            summary_instruction += " Then ask an open question (who/what/how) to uncover a bottleneck or pain."
-        elif stage_id == "objection_handling":
-            summary_instruction += " Empathize and ask a gentle clarifier so they keep talking."
-        elif stage_id == "close_cta":
-            summary_instruction += " Explain in one sentence how we help (AI automation, web/app, cloud/data) and ask them to share one challenge you'd focus on; then suggest a quick chat later today or tomorrow and ask what time works."
+
+        # Special handling for clear reschedules and hard "no"
+        special_summary = None
+        if any(cue in text_lower for cue in RESCHEDULE_CUES):
+            special_summary = (
+                f'The user just said: "{snippet}". '
+                "They are asking you to call back later, most likely tomorrow. "
+                "Acknowledge this clearly, apologize for the bad timing, and ask what time tomorrow works best. "
+                "Confirm the follow-up time and then wrap up the call politely without further pitching."
+            )
+        elif any(cue in text_lower for cue in HARD_NO_CUES):
+            special_summary = (
+                f'The user just said: "{snippet}". '
+                "They are making it clear they do not want to talk or are not interested. "
+                "Respect this. Briefly acknowledge and thank them for their time. "
+                "You may ask ONE light clarifying question only if it feels natural, "
+                "but if they still sound uninterested, end the call politely instead of pushing."
+            )
+
+        if special_summary:
+            msgs.append({"role": "user", "content": "[SUMMARY CUE]\n" + special_summary})
         else:
-            summary_instruction += " Follow with a curious, open-ended question."
-        msgs.append({"role":"user","content":f"[SUMMARY CUE]\n{summary_instruction}"})
+            summary_instruction = f'The user just said: "{snippet}". Restate that in your own words and acknowledge how it feels.'
+            if stage_id in ("discovery_qualify", "value_presentation"):
+                summary_instruction += (
+                    " Then ask an open question (who/what/how) that helps you discover whether their main challenge is "
+                    "marketing/leads, automation/operations, website or app experience, cloud/infrastructure, data/analytics, "
+                    "or general tech direction."
+                )
+            elif stage_id == "objection_handling":
+                summary_instruction += " Empathize and ask a gentle clarifier so they keep talking."
+            elif stage_id == "close_cta":
+                summary_instruction += (
+                    " In one short sentence, explain how Cloumen can help based on what they already told you, choosing the most relevant "
+                    "among AI solutions, web/app work, cloud or data help, digital marketing, or technology consulting. "
+                    "Then ask for a specific next step such as a short demo or a callback time."
+                )
+            else:
+                summary_instruction += " Follow with a curious, open-ended question."
+            msgs.append({"role": "user", "content": "[SUMMARY CUE]\n" + summary_instruction})
+
+    # Debug preview of the tail of the prompt
     import json as _json
+
     try:
         print("[LLM Prompt Preview] ", _json.dumps(msgs[-6:], indent=2))
     except Exception:
@@ -342,28 +480,38 @@ def _assemble_messages():
 def deepseek_reply(prompt: str) -> str:
     norm = normalize_text(prompt)
     is_command = norm in SPECIAL_COMMANDS
-    store.conv.append("user", prompt); store.enqueue_turn("user", prompt)
+    store.conv.append("user", prompt)
+    store.enqueue_turn("user", prompt)
     plow = prompt.lower()
 
     g = _end_call_checks(plow, prompt)
-    if g is not None: return g
+    if g is not None:
+        return g
 
     g = guards.uninterested_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.time_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.referral_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.gatekeeper_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.identity_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.location_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.pitch_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.price_guard(prompt)
-    if g: return g
+    if g:
+        return g
 
     # Memory first: static/learned, then cache, then LLM
     if not is_command:
@@ -378,8 +526,10 @@ def deepseek_reply(prompt: str) -> str:
 
     conv_key = getattr(store.conv, "key", "conv")
     cache_key = hashlib.sha256(f"{conv_key}|{norm}".encode()).hexdigest()
-    try: cached = rds.get(cache_key)
-    except Exception: cached = None
+    try:
+        cached = rds.get(cache_key)
+    except Exception:
+        cached = None
     if cached:
         reply = shape_for_tts(cached)
         store.conv.append("assistant", reply)
@@ -390,7 +540,7 @@ def deepseek_reply(prompt: str) -> str:
         return reply
 
     if not client:
-        reply = shape_for_tts("Sorry, my brain isn’t online right now. Could we try again shortly?")
+        reply = shape_for_tts("Sorry, my brain isn't online right now. Could we try again shortly?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
         if not is_command:
@@ -402,16 +552,20 @@ def deepseek_reply(prompt: str) -> str:
         messages = _assemble_messages()
         resp = client.chat.completions.create(
             model="deepseek-chat",
-            temperature=0.6, top_p=0.9,
-            presence_penalty=0.2, frequency_penalty=0.2,
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS","120")),
+            temperature=0.6,
+            top_p=0.9,
+            presence_penalty=0.2,
+            frequency_penalty=0.2,
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "120")),
             messages=messages,
             timeout=12,
         )
-        raw = (resp.choices[0].message.content or "").strip() or "Sorry, I didn’t catch that. Could you repeat?"
+        raw = (resp.choices[0].message.content or "").strip() or "Sorry, I didn't catch that. Could you repeat?"
         reply = shape_for_tts(raw)
-        try: rds.setex(cache_key, 86400, reply)
-        except Exception: pass
+        try:
+            rds.setex(cache_key, 86400, reply)
+        except Exception:
+            pass
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
         if not is_command:
@@ -420,7 +574,7 @@ def deepseek_reply(prompt: str) -> str:
         return reply
     except Exception as e:
         print(f"⚠️ DeepSeek error: {e}")
-        reply = shape_for_tts("I’m having a connection issue. Can we try again in a moment?")
+        reply = shape_for_tts("I'm having a connection issue. Can we try again in a moment?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
         if not is_command:
@@ -434,61 +588,84 @@ def deepseek_reply(prompt: str) -> str:
 def deepseek_stream_and_speak(prompt: str) -> str:
     norm = normalize_text(prompt)
     is_command = norm in SPECIAL_COMMANDS
-    store.conv.append("user", prompt); store.enqueue_turn("user", prompt)
+    store.conv.append("user", prompt)
+    store.enqueue_turn("user", prompt)
 
     plow = prompt.lower()
     g = _end_call_checks(plow, prompt)
-    if g is not None: return g
+    if g is not None:
+        return g
 
     g = guards.uninterested_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.time_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.referral_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.gatekeeper_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.identity_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.location_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.pitch_guard(prompt)
-    if g: return g
+    if g:
+        return g
     g = guards.price_guard(prompt)
-    if g: return g
+    if g:
+        return g
 
     # Memory first: static/learned, then cache, then LLM
     if not is_command:
         mem = _best_memory_match(norm)
         if mem:
             reply = shape_for_tts(mem)
-            store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
-            store.enqueue_learn_async(norm, reply); speak(reply); return reply
+            store.conv.append("assistant", reply)
+            store.enqueue_turn("assistant", reply)
+            store.enqueue_learn_async(norm, reply)
+            speak(reply)
+            return reply
+
     conv_key = getattr(store.conv, "key", "conv")
     cache_key = hashlib.sha256(f"{conv_key}|{norm}".encode()).hexdigest()
-    try: cached = rds.get(cache_key)
-    except Exception: cached = None
+    try:
+        cached = rds.get(cache_key)
+    except Exception:
+        cached = None
     if cached:
         reply = shape_for_tts(cached)
-        store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+        store.conv.append("assistant", reply)
+        store.enqueue_turn("assistant", reply)
         if not is_command:
             store.enqueue_learn_async(norm, reply)
-        speak(reply); return reply
+        speak(reply)
+        return reply
 
     if not client:
-        reply = shape_for_tts("Sorry, my brain isn’t online right now. Could we try again shortly?")
-        store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+        reply = shape_for_tts("Sorry, my brain isn't online right now. Could we try again shortly?")
+        store.conv.append("assistant", reply)
+        store.enqueue_turn("assistant", reply)
         if not is_command:
             store.enqueue_learn_async(norm, reply)
-        speak(reply); return reply
+        speak(reply)
+        return reply
 
     messages = _assemble_messages()
+    stream_id = tts.begin_stream()
     try:
         resp = client.chat.completions.create(
             model="deepseek-chat",
-            temperature=0.6, top_p=0.9,
-            presence_penalty=0.2, frequency_penalty=0.2,
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS","120")),
+            temperature=0.6,
+            top_p=0.9,
+            presence_penalty=0.2,
+            frequency_penalty=0.2,
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "120")),
             messages=messages,
             stream=True,
             timeout=12,
@@ -498,19 +675,21 @@ def deepseek_stream_and_speak(prompt: str) -> str:
         last_emitted_tail = ""
         first_flush_done = False
         last_spoken = [""]
+        streamed_any = False
 
-        def flush():
-            nonlocal last_emitted_tail, first_flush_done
-            if not buffer: return
+        def flush(force: bool = False):
+            nonlocal last_emitted_tail, first_flush_done, streamed_any
+            if not buffer:
+                return
             chunk = "".join(buffer).strip()
-            if not chunk: return
+            if not chunk:
+                buffer.clear()
+                return
 
-            # Light clean-up (avoid "ok.", ".", "thanks.")
             if len(chunk) <= 3 and all(c in ".!?," for c in chunk):
                 buffer.clear()
                 return
 
-            # Deduplicate: skip if >90% similar to last spoken
             sim = fuzz.partial_ratio(chunk, last_spoken[0]) if last_spoken[0] else 0
             if sim >= 90:
                 buffer.clear()
@@ -519,7 +698,8 @@ def deepseek_stream_and_speak(prompt: str) -> str:
             if last_emitted_tail in {",", ";", ":", ")", '"', "”"} and chunk and chunk[0].isalnum():
                 chunk = " " + chunk
 
-            speak(chunk)
+            flushed = tts.stream_text(stream_id, chunk, force_flush=force or chunk.endswith((".", "?", "!")))
+            streamed_any = streamed_any or bool(flushed)
             store.publish_event({"type": "assistant_turn", "text": chunk})
             last_emitted_tail = chunk[-1] if chunk else last_emitted_tail
             last_spoken[0] = chunk
@@ -537,55 +717,58 @@ def deepseek_stream_and_speak(prompt: str) -> str:
             buffer.append(delta)
 
             last = delta[-1:]
-            def _buflen(): return sum(len(x) for x in buffer)
+
+            def _buflen():
+                return sum(len(x) for x in buffer)
 
             if STREAM_FLUSH_ON_PUNCT_ONLY:
-                should_flush = last in (".","?","!")
+                should_flush = last in (".", "?", "!")
             else:
                 should_flush = False
                 if not first_flush_done and STREAM_FIRST_FLUSH_CHARS > 0 and _buflen() >= STREAM_FIRST_FLUSH_CHARS:
                     should_flush = True
-                elif last in (".","?","!"):
+                elif last in (".", "?", "!"):
                     should_flush = True
                 elif STREAM_BUFFER_FLUSH_CHARS > 0 and _buflen() >= STREAM_BUFFER_FLUSH_CHARS:
                     should_flush = True
 
             if should_flush:
-                flush()
+                flush(force=last in (".", "?", "!"))
 
-        # ✅ Final guaranteed flush
-        flush()
+        flush(force=True)
 
-        # ✅ Final reply synthesis (avoid replay)
-        reply = shape_for_tts("".join(full).strip() or "Could you repeat that?")
+        reply_raw = "".join(full).strip() or "Could you repeat that?"
+        reply = shape_for_tts(reply_raw)
         sim_final = fuzz.partial_ratio(reply, last_spoken[0]) if last_spoken[0] else 0
-        if sim_final < 90:
-            speak(reply)
+        pending_final = reply if (sim_final < 90 and not streamed_any) else None
 
-        try: rds.setex(cache_key, 86400, reply)
-        except Exception: pass
+        try:
+            rds.setex(cache_key, 86400, reply)
+        except Exception:
+            pass
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
         if not is_command:
             store.enqueue_learn_async(norm, reply)
+        tts.end_stream(stream_id, final_text=pending_final)
         return reply
 
     except Exception as e:
         print(f"⚠️ DeepSeek stream error: {e}")
-        reply = shape_for_tts("I’m having a connection issue. Can we try again in a moment?")
+        reply = shape_for_tts("I'm having a connection issue. Can we try again in a moment?")
         store.conv.append("assistant", reply)
         store.enqueue_turn("assistant", reply)
         if not is_command:
             store.enqueue_learn_async(norm, reply)
-        speak(reply)
+        tts.end_stream(stream_id, final_text=reply)
         return reply
-
 
 # ===============================================================
 # LLM Worker Thread
 # ===============================================================
 _first_turn_done = False
-INSTANT_BACKCHANNEL = os.getenv("INSTANT_BACKCHANNEL","1") not in ("0","false","False")
+INSTANT_BACKCHANNEL = os.getenv("INSTANT_BACKCHANNEL", "1") not in ("0", "false", "False")
+
 
 def llm_worker():
     global _first_turn_done
@@ -607,7 +790,7 @@ def llm_worker():
                 if INSTANT_BACKCHANNEL and not _first_turn_done:
                     speak("Okay, one moment.")
 
-                if os.getenv("LLM_STREAM","1") not in ("0","false","False"):
+                if os.getenv("LLM_STREAM", "1") not in ("0", "false", "False"):
                     reply = deepseek_stream_and_speak(text)
                 else:
                     reply = deepseek_reply(text)
@@ -618,20 +801,23 @@ def llm_worker():
         except Exception as e:
             print("⚠️ llm_worker error:", e)
         finally:
-            try: llm_queue.task_done()
-            except Exception: pass
+            try:
+                llm_queue.task_done()
+            except Exception:
+                pass
 
 # ===============================================================
 # Warmup Function
 # ===============================================================
 def warmup_llm():
-    if not client: return
+    if not client:
+        return
     try:
         client.chat.completions.create(
             model="deepseek-chat",
-            messages=[{"role":"system","content":"ping"}, {"role":"user","content":"hi"}],
+            messages=[{"role": "system", "content": "ping"}, {"role": "user", "content": "hi"}],
             max_tokens=1,
-            timeout=5
+            timeout=5,
         )
     except Exception:
         pass

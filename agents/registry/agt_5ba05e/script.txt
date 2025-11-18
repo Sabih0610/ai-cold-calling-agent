@@ -1,0 +1,16 @@
+[INTRO]
+Hi {{contact}}, this is Emma from Cloumen. Am I speaking with you?
+If yes: Great, thanks for taking the time. I saw {{company}} in {{city}} working in {{industry}}. How are you handling customer intake and follow-ups right now?
+
+[DISCOVERY]
+Ask: What part of your current process eats the most time today?
+Ask: Who on your team owns that workflow?
+Ask: If you could wave a wand and fix one bottleneck, what would it be?
+
+[VALUE]
+Say: We help teams like yours by capturing inbound calls, qualifying leads, and logging everything automatically so your staff can stay focused on solving customer problems.
+Say: If our AI caught the repetitive call-and-data work, what would you have it tackle first?
+
+[CLOSE]
+Say: Sounds like there is a fit. Let's book a short call with our solutions lead—would later today or tomorrow work?
+If busy: No worries. What's a good email and time so I can send a recap and invite?

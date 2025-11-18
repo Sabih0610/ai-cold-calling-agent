@@ -1,0 +1,12 @@
+{
+  "id": "agt_5ba05e",
+  "name": "Default Qualifier",
+  "voice_id": "female_hfc",
+  "context": "Script sections: Intro \u2192 Discovery \u2192 Value \u2192 Close",
+  "script_path": "agents\\registry\\agt_5ba05e\\script.txt",
+  "flow_paths": {
+    "json": "agents\\registry\\agt_5ba05e\\flow.json",
+    "mmd": "agents\\registry\\agt_5ba05e\\flow.mmd"
+  },
+  "updated_at": 1762719177
+}

@@ -1,11 +1,20 @@
 # core/tts.py
 import os, time, json, shutil, subprocess, threading, tempfile
+from uuid import uuid4
+import numpy as np
 import sounddevice as sd
 from core.utils import to_speakable, set_user_identity_async
 from core import store
 
 # === NEW: AudioSocket sink helpers ===
-from core.audio import send_tts_pcm16_16k, audiosocket_ready, resample_int16_mono, FRAME_SIZE, FRAME_DURATION
+from core.audio import (
+    send_tts_pcm16_16k,
+    audiosocket_ready,
+    resample_int16_mono,
+    FRAME_SIZE,
+    FRAME_DURATION,
+    flush_tts_tx,  # NEW: used to drop buffered TX audio on barge-in
+)
 
 # ===============================================================
 # Piper Configuration
@@ -45,6 +54,11 @@ ECHO_TRACK_DECAY        = float(os.getenv("ECHO_TRACK_DECAY", "0.93"))
 # Where TTS should go: "audiosocket" | "speakers" | "both"
 AUDIO_SINK = os.getenv("AUDIO_SINK", "audiosocket").lower()
 TTS_WAIT_FOR_SOCKET = os.getenv("TTS_WAIT_FOR_SOCKET", "1") != "0"
+
+# Streaming controls
+TTS_STREAMING_ENABLED = os.getenv("TTS_STREAMING", "1") not in ("0", "false", "False")
+TTS_STREAM_MIN_CHARS = int(os.getenv("TTS_STREAM_MIN_CHARS", "22"))
+TTS_STREAM_FLUSH_MS = int(os.getenv("TTS_STREAM_FLUSH_MS", "420"))
 
 # Playback state
 tts_playing = threading.Event()
@@ -100,6 +114,10 @@ class PiperEngine:
         self._last_data_ts = 0.0
         self._model_path = None
         self._config_path = None
+        self._duck_lock = threading.Lock()
+        self._duck_target = 1.0
+        self._duck_current = 1.0
+        self._soft_interrupt_flag = threading.Event()
 
     # ---------------------------
     # STDERR Reader for Debugging
@@ -122,12 +140,12 @@ class PiperEngine:
         elif not (self._model_path and self._config_path):
             self._model_path, self._config_path = _select_voice_paths(PIPER_VOICE_SELECT)
 
-        print(f"[Piper] exe={PIPER_EXE} which={shutil.which(PIPER_EXE)}")
-        print(f"[Piper] model={self._model_path} exists={os.path.exists(self._model_path)}")
-        print(f"[Piper] config={self._config_path} exists={os.path.exists(self._config_path)}")
+        _tlog(f"[Piper] exe={PIPER_EXE} which={shutil.which(PIPER_EXE)}")
+        _tlog(f"[Piper] model={self._model_path} exists={os.path.exists(self._model_path)}")
+        _tlog(f"[Piper] config={self._config_path} exists={os.path.exists(self._config_path)}")
 
         if not (shutil.which(PIPER_EXE) and os.path.exists(self._model_path) and os.path.exists(self._config_path)):
-            print("🔊 Piper not available; audio disabled.")
+            _tlog("🔊 Piper not available; audio disabled.")
             return False
 
         self.sr = _load_voice_sr(self._config_path)
@@ -191,6 +209,9 @@ class PiperEngine:
                 # Ensure 16k for AudioSocket (the call side)
                 data16 = data if self.sr == 16000 else resample_int16_mono(data, self.sr, 16000)
 
+                ducked = self._apply_ducking(data16)
+                data16 = ducked
+
                 # Gate the FIRST audible chunk until AudioSocket is connected
                 if AUDIO_SINK in ("audiosocket", "both"):
                     if not first_chunk_sent and TTS_WAIT_FOR_SOCKET:
@@ -202,12 +223,56 @@ class PiperEngine:
                 if AUDIO_SINK in ("speakers", "both") and self.stream:
                     try:
                         # Speakers expect Piper's native sample rate:
-                        self.stream.write(data)
+                        self.stream.write(self._apply_ducking(data))
                     except Exception:
                         pass
 
         except Exception:
             pass
+
+    def _apply_ducking(self, pcm16: bytes) -> bytes:
+        """
+        Apply gentle gain changes so we can duck or fade out without audible clicks.
+        """
+        with self._duck_lock:
+            target = self._duck_target
+            current = self._duck_current
+            if abs(current - target) <= 0.02:
+                self._duck_current = target
+            else:
+                step = 0.08 if current > target else 0.12
+                self._duck_current = max(target, current - step) if current > target else min(target, current + step)
+            gain = self._duck_current
+        if gain >= 0.995:
+            return pcm16
+        arr = np.frombuffer(pcm16, dtype=np.int16).astype(np.float32)
+        arr *= gain
+        np.clip(arr, -32768, 32767, out=arr)
+        return arr.astype(np.int16).tobytes()
+
+    def request_duck(self, level: float = 0.4):
+        with self._duck_lock:
+            self._duck_target = float(min(max(level, 0.05), 1.0))
+
+    def release_duck(self):
+        with self._duck_lock:
+            self._duck_target = 1.0
+
+    def soft_interrupt(self, fade_ms: int = 450):
+        if not tts_playing.is_set() or self._soft_interrupt_flag.is_set():
+            return
+        self._soft_interrupt_flag.set()
+
+        def _fade_and_restart():
+            try:
+                self.request_duck(0.05)
+                time.sleep(max(0.05, fade_ms / 1000.0))
+                tts_interrupt()
+            finally:
+                self.release_duck()
+                self._soft_interrupt_flag.clear()
+
+        threading.Thread(target=_fade_and_restart, daemon=True).start()
 
     # ---------------------------
     # Speaking
@@ -249,10 +314,14 @@ class PiperEngine:
             pass
         try:
             if self.stream:
-                try: self.stream.abort()
-                except Exception: pass
-                try: self.stream.close()
-                except Exception: pass
+                try:
+                    self.stream.abort()
+                except Exception:
+                    pass
+                try:
+                    self.stream.close()
+                except Exception:
+                    pass
         finally:
             self.stream = None
         try:
@@ -272,8 +341,76 @@ class PiperEngine:
 # ===============================================================
 # Global Engine & Utility Wrappers
 # ===============================================================
+class _StreamSession:
+    def __init__(self, session_id: str | None):
+        self.session_id = session_id or f"tts_{uuid4().hex[:8]}"
+        self.buffer: list[str] = []
+        self.pending_chars = 0
+        self.lock = threading.Lock()
+        self.last_flush = time.time()
+        self.active = True
+
+    def _flush_locked(self) -> str:
+        chunk = "".join(self.buffer).strip()
+        self.buffer.clear()
+        self.pending_chars = 0
+        self.last_flush = time.time()
+        return chunk
+
+    def append(self, text: str, force: bool = False) -> bool:
+        if not self.active or not text:
+            return False
+        chunk = None
+        now = time.time()
+        with self.lock:
+            self.buffer.append(text)
+            self.pending_chars += len(text)
+            should_flush = force
+            if not should_flush:
+                if self.pending_chars >= TTS_STREAM_MIN_CHARS:
+                    should_flush = True
+                elif text[-1:] in (".", "?", "!"):
+                    should_flush = True
+                elif (now - self.last_flush) * 1000.0 >= TTS_STREAM_FLUSH_MS:
+                    should_flush = True
+            if should_flush:
+                chunk = self._flush_locked()
+        if chunk:
+            _engine.say(chunk)
+            store.publish_event({
+                "type": "state",
+                "name": "tts_stream_chunk",
+                "stream_id": self.session_id,
+                "text": chunk,
+            })
+            return True
+        return False
+
+    def flush(self) -> bool:
+        with self.lock:
+            if not self.buffer:
+                return False
+            chunk = self._flush_locked()
+        if chunk:
+            _engine.say(chunk)
+            store.publish_event({
+                "type": "state",
+                "name": "tts_stream_chunk",
+                "stream_id": self.session_id,
+                "text": chunk,
+                "final": True,
+            })
+            return True
+        return False
+
+    def close(self):
+        self.active = False
+
+
 _engine = PiperEngine()
 _started = False
+_stream_lock = threading.Lock()
+_active_stream: _StreamSession | None = None
 
 
 def init_engine():
@@ -288,12 +425,80 @@ def use_voice(voice_entry: dict):
     config = voice_entry.get("config")
     _engine.restart(model_path=model, config_path=config)
 
+
 def _current_voice_paths():
     model = getattr(_engine, "_model_path", None)
     config = getattr(_engine, "_config_path", None)
     if not (model and config):
         model, config = _select_voice_paths(PIPER_VOICE_SELECT)
     return model, config
+
+
+def begin_stream(session_id: str | None = None) -> str | None:
+    if not TTS_STREAMING_ENABLED:
+        return None
+    with _stream_lock:
+        global _active_stream
+        if _active_stream:
+            try:
+                _active_stream.flush()
+            except Exception:
+                pass
+            _active_stream.close()
+            _active_stream = None
+        _active_stream = _StreamSession(session_id)
+        return _active_stream.session_id
+
+
+def stream_text(stream_id: str | None, text: str, force_flush: bool = False) -> bool:
+    if not text:
+        return False
+    if not TTS_STREAMING_ENABLED or not stream_id:
+        speak(text)
+        return True
+    with _stream_lock:
+        session = _active_stream if (_active_stream and _active_stream.session_id == stream_id) else None
+    if not session:
+        new_id = begin_stream(stream_id)
+        if not new_id:
+            speak(text)
+            return True
+        with _stream_lock:
+            session = _active_stream
+    return session.append(text, force=force_flush) if session else False
+
+
+def end_stream(stream_id: str | None, final_text: str | None = None):
+    if not TTS_STREAMING_ENABLED or not stream_id:
+        if final_text:
+            speak(final_text)
+        return
+    with _stream_lock:
+        global _active_stream
+        session = _active_stream if (_active_stream and _active_stream.session_id == stream_id) else None
+        _active_stream = None
+    if session:
+        try:
+            session.flush()
+        except Exception:
+            pass
+        session.close()
+    if final_text:
+        speak(final_text)
+
+
+def abort_stream(stream_id: str | None = None):
+    if not TTS_STREAMING_ENABLED:
+        return
+    with _stream_lock:
+        global _active_stream
+        session = _active_stream
+        if session and stream_id and session.session_id != stream_id:
+            session = None
+        if session:
+            session.close()
+        _active_stream = None
+
 
 def synthesize_to_pcm16(text: str) -> bytes:
     """Generate 16 kHz PCM bytes for the given text using Piper CLI."""
@@ -359,6 +564,7 @@ def synthesize_to_pcm16(text: str) -> bytes:
                 os.unlink(output_path)
         except Exception:
             pass
+
 
 def play_pcm16_buffer(pcm_bytes: bytes):
     """Stream pre-generated PCM16 (16 kHz) to the current audio sink."""
@@ -429,6 +635,16 @@ def speak(text: str, user_text_for_name_detect: str = None):
 
 def tts_interrupt():
     """Forcefully restarts Piper voice engine if barge-in or stuck."""
+    # Stop any active streaming session
+    abort_stream(None)
+
+    # 🔹 NEW: flush any audio that is already buffered to go out to the caller
+    try:
+        flush_tts_tx()
+    except Exception:
+        pass
+
+    # Restart Piper so no new audio is generated
     try:
         _engine.restart()
     except Exception:
@@ -436,8 +652,18 @@ def tts_interrupt():
             _engine.start()
         except Exception:
             print("⚠️ Piper restart failed.")
+
+    # Clear state flags
+    try:
+        tts_playing.clear()
+    except Exception:
+        pass
     try:
         store.publish_event({"type": "state", "name": "tts_playing", "value": False})
+    except Exception:
+        pass
+    try:
+        _engine.release_duck()
     except Exception:
         pass
 
@@ -453,6 +679,33 @@ def get_tts_started_ts():
     return float(globals().get("_tts_started_at", 0.0))
 
 
+def request_duck(level: float = 0.4):
+    try:
+        _engine.request_duck(level)
+    except Exception:
+        pass
+
+
+def release_duck(delay_ms: int = 0):
+    def _release():
+        try:
+            _engine.release_duck()
+        except Exception:
+            pass
+    if delay_ms > 0:
+        threading.Timer(delay_ms / 1000.0, _release).start()
+    else:
+        _release()
+
+
+def tts_soft_interrupt(fade_ms: int = 450):
+    try:
+        _engine.soft_interrupt(fade_ms=fade_ms)
+    except Exception:
+        tts_interrupt()
+    abort_stream(None)
+
+
 # ===============================================================
 # Optional Startup Voice Test
 # ===============================================================
@@ -460,3 +713,10 @@ if __name__ == "__main__":
     print("🔊 Initializing Piper engine test...")
     _engine.start()
     speak("Voice check. If you hear this, Piper is working.")
+
+LOG_TTS_EVENTS = os.getenv("LOG_TTS_EVENTS", "1") not in ("0","false","False")
+
+
+def _tlog(msg):
+    if LOG_TTS_EVENTS:
+        print(msg)

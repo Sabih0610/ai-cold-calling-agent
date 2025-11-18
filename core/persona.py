@@ -1,3 +1,4 @@
+# core/persona.py
 import json
 import os
 import random
@@ -92,12 +93,12 @@ def persona_block() -> str:
     meta = data.get("meta") or {}
     persona = data.get("persona") or {}
     objectives = data.get("objectives") or []
-    behaviors = (data.get("behaviors") or {})
-    guardrails = (data.get("guardrails") or {})
+    behaviors = data.get("behaviors") or {}
+    guardrails = data.get("guardrails") or {}
 
     if meta:
         lines.append(
-            f"You are {persona.get('name', meta.get('agent_name','an agent'))} representing {meta.get('brand','Cloumen')}."
+            f"You are {persona.get('name', meta.get('agent_name', 'an agent'))} representing {meta.get('brand', 'Cloumen')}."
         )
     if objectives:
         lines.append("Objectives:")
@@ -106,15 +107,15 @@ def persona_block() -> str:
         lines.append("Tone & persona directives:")
         for key, val in persona.items():
             if isinstance(val, str):
-                lines.append(f"- {key.replace('_',' ').title()}: {val}")
+                lines.append(f"- {key.replace('_', ' ').title()}: {val}")
     if behaviors:
         lines.append("Behavior expectations:")
         for key, val in behaviors.items():
-            lines.append(f"- {key.replace('_',' ').title()}: {val}")
+            lines.append(f"- {key.replace('_', ' ').title()}: {val}")
     if guardrails:
         lines.append("Guardrails:")
         for key, val in guardrails.items():
-            lines.append(f"- {key.replace('_',' ').title()}: {val}")
+            lines.append(f"- {key.replace('_', ' ').title()}: {val}")
     return "\n".join(lines).strip()
 
 
@@ -176,7 +177,7 @@ def opener_brief(lead: Dict[str, Any] | None) -> str:
     if company:
         lines.append(f"- Company: {company}")
     if city or state:
-        lines.append(f"- Location: {', '.join(filter(None,[city,state]))}")
+        lines.append(f"- Location: {', '.join(filter(None, [city, state]))}")
     if industry:
         lines.append(f"- Industry: {industry}")
     if role:
