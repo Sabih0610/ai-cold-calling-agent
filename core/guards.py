@@ -44,7 +44,10 @@ def _script_guard(script_key: str, user_text: str, replacements: Optional[dict] 
     speak(text, user_text_for_name_detect=user_text)
     return text
 
-_UNINTERESTED_PAT = re.compile(r"\b(not interested|no thanks|no thank you)\b", re.I)
+_UNINTERESTED_PAT = re.compile(
+    r"(not interested|no thanks|no thank you|not a fit|don't like it|do not like it|leave me alone|go away|no right to|not a good time)",
+    re.I,
+)
 def uninterested_guard(user_text: str) -> Optional[str]:
     if not user_text or not _UNINTERESTED_PAT.search(user_text):
         return None
@@ -101,13 +104,18 @@ def identity_guard(user_text: str) -> Optional[str]:
     stage_id, _ = persona.stage_for_turn(flow_state.current_stage_idx())
     follow_question = persona.stage_question(stage_id or "rapport")
     handled_before = flow_state.identity_handled()
-    focus = os.getenv("FOCUS_AREA", "follow-ups or qualification")
+    focus = os.getenv(
+        "FOCUS_AREA",
+        "marketing, web and app, cloud and DevOps, data and analytics, or automation",
+    )
     if not handled_before:
         if template:
             text = template.replace("{{focus_area}}", focus)
         else:
-            text = (f"That is totally fair. I'm Emma with Cloumen, and I reach out when we see a way "
-                    f"to save teams time on {focus}. I only ask a couple quick questions to see if it is even worth a demo.")
+            text = (
+                "That is totally fair. I'm Emma with Cloumen. "
+                f"We help with {focus}. I only ask a couple quick questions to see if it is worth a follow-up."
+            )
         flow_state.mark_identity()
     else:
         text = ("Absolutely understand the caution. I'm here just to see if there's anything worth a quick follow-up later. "
@@ -167,6 +175,68 @@ def pitch_guard(user_text: str) -> Optional[str]:
             speak(reply, user_text_for_name_detect=user_text)
             return reply
     return None
+
+# Services listing guard (when they ask "what do you do/offer?")
+_SERVICES_PAT = re.compile(
+    r"(what\s+services|what\s+do\s+you\s+(offer|provide|do)|services\s+do\s+you|tell\s+me\s+about\s+your\s+services|what\s+kind\s+of\s+services|what\s+companies\s+do\s+you\s+serve|who\s+do\s+you\s+work\s+with)",
+    re.I,
+)
+SERVICES_REPLY = (
+    "We help in six areas: marketing and growth, web and app builds, cloud and DevOps, "
+    "data and analytics, automation and AI agents, and technology consulting. "
+    "Which area matters most for you right now?"
+)
+
+def services_guard(user_text: str) -> Optional[str]:
+    if not user_text or not _SERVICES_PAT.search(user_text):
+        return None
+    store.conv.append("assistant", SERVICES_REPLY); store.enqueue_turn("assistant", SERVICES_REPLY)
+    speak(SERVICES_REPLY, user_text_for_name_detect=user_text)
+    return SERVICES_REPLY
+
+# Targeted service explainer when they mention a lane explicitly
+def service_explainer_guard(user_text: str) -> Optional[str]:
+    if not user_text:
+        return None
+    t = (user_text or "").lower()
+    reply = None
+    if "cloud" in t or "migration" in t or "devops" in t:
+        reply = ("On cloud and DevOps, we handle planning, infra setup, migrations, automation, and monitoring "
+                 "so your team can ship reliably. Want me to walk through what you already have?")
+    elif "website" in t or "app" in t or "mobile" in t:
+        reply = ("On web and app, we build and modernize sites and apps with speed, UX, and analytics baked in. "
+                 "Should we talk about your current site stack and pain points?")
+    elif "marketing" in t or "ads" in t or "leads" in t or "growth" in t:
+        reply = ("For marketing and growth, we run paid and organic programs with clear tracking from click to lead. "
+                 "Do you want help with campaigns, conversion, or reporting?")
+    elif "data" in t or "dashboard" in t or "analytics" in t or "report" in t:
+        reply = ("On data and analytics, we build pipelines and dashboards so you can see performance in real time. "
+                 "Which metrics are hardest for you to see today?")
+    elif "automation" in t or "ai" in t or "agent" in t:
+        reply = ("For automation and AI, we build voice/chat agents and workflow automation to cut manual work. "
+                 "Which process would you automate first?")
+    elif "consult" in t or "strategy" in t or "roadmap" in t:
+        reply = ("For tech consulting, we set a simple roadmap, prioritize the wins, and bring the delivery team to execute. "
+                 "What initiative is stuck right now?")
+    if reply:
+        store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+        speak(reply, user_text_for_name_detect=user_text)
+        return reply
+    return None
+
+# Abuse / hostile guard: exit respectfully
+_ABUSE_PAT = re.compile(r"(idiot|stupid|shut up|hate you|go away|leave me alone)", re.I)
+def abuse_guard(user_text: str) -> Optional[str]:
+    if not user_text or not _ABUSE_PAT.search(user_text):
+        return None
+    reply = "Understood. I will let you go now. Thanks for your time."
+    store.conv.append("assistant", reply); store.enqueue_turn("assistant", reply)
+    speak(reply, user_text_for_name_detect=user_text)
+    try:
+        store.set_stop("abuse_guard")
+    except Exception:
+        pass
+    return reply
 
 def voicemail_script(name: str = "", trigger: str = "", callback: str = "") -> str:
     return callplaybook.get_script(

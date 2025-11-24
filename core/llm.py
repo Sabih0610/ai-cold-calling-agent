@@ -34,6 +34,12 @@ STREAM_BUFFER_FLUSH_CHARS  = int(os.getenv("STREAM_BUFFER_FLUSH_CHARS", "0"))
 _context_provider: Callable[[], str] = lambda: ""
 _hint_provider: Callable[[], str] = lambda: ""
 
+# In-process "sent once" guard so we do not resend heavy blocks every turn
+_sent_once: set[tuple[str, str]] = set()  # (conv_key, block_id)
+# Primer flag to skip heavy lead context/guidelines after first send
+_primer_local: set[str] = set()
+_primer_done: set[str] = set()
+
 SPECIAL_COMMANDS = {"start_call"}
 
 POSITIVE_CLOSE_CUES = (
@@ -302,21 +308,48 @@ def _assemble_messages():
     except Exception:
         conv_key = "conv"
 
+    def _mark_once(block_id: str) -> bool:
+        """
+        Returns True if this block should be sent (not seen yet for this conv_key).
+        Uses Redis when available; falls back to in-memory guard to avoid repeats when Redis is down.
+        """
+        key = (conv_key, block_id)
+        if key in _sent_once:
+            return False
+        _sent_once.add(key)
+        return True
+
+    primer_key = f"primer:{conv_key}"
+    primer_sent = False
+    try:
+        primer_sent = bool(rds.get(primer_key))
+    except Exception:
+        primer_sent = primer_key in _primer_local
+    # If we have already primed this conversation in-process, respect it
+    if primer_key in _primer_done:
+        primer_sent = True
+
     # One-shot call / lead context
-    context = (_context_provider() or "").strip()
-    if context:
-        h = hashlib.sha256(context.encode("utf-8")).hexdigest()
-        context_key = f"ctxsent:{conv_key}:{h}"
-        try:
-            already = rds.get(context_key)
-        except Exception:
-            already = None
-        if not already:
-            msgs.append({"role": "user", "content": context})
+    if not primer_sent:
+        context = (_context_provider() or "").strip()
+        if context:
+            h = hashlib.sha256(context.encode("utf-8")).hexdigest()
+            context_key = f"ctxsent:{conv_key}:{h}"
             try:
-                rds.setex(context_key, 3600, "1")
+                already = rds.get(context_key)
             except Exception:
-                pass
+                already = None
+            allow = False
+            if not already:
+                allow = True
+                try:
+                    rds.setex(context_key, 3600, "1")
+                except Exception:
+                    pass
+            elif _mark_once(context_key):
+                allow = True
+            if allow:
+                msgs.append({"role": "user", "content": context})
 
     # Flow hint from higher-level planner
     hint = (_hint_provider() or "").strip()
@@ -324,41 +357,44 @@ def _assemble_messages():
         msgs.append({"role": "user", "content": "[FLOW HINT]\n" + hint})
 
     # Global guidelines (rarely change)
-    guide = callplaybook.guidelines_block()
-    if guide:
-        send = True
-        ghash = callplaybook.guidelines_hash()
-        guide_key = f"callguide:{conv_key}:{ghash}" if ghash else None
-        if guide_key:
-            try:
-                if rds.get(guide_key):
-                    send = False
-            except Exception:
-                pass
-        if send:
-            msgs.append({"role": "user", "content": "[CALL GUIDELINES]\n" + guide})
+    if not primer_sent:
+        guide = callplaybook.guidelines_block()
+        if guide:
+            send = True
+            ghash = callplaybook.guidelines_hash()
+            guide_key = f"callguide:{conv_key}:{ghash}" if ghash else None
             if guide_key:
                 try:
-                    rds.setex(guide_key, 3600, "1")
+                    if rds.get(guide_key):
+                        send = False
                 except Exception:
-                    pass
+                    send = not (_mark_once(guide_key))
+            if send:
+                msgs.append({"role": "user", "content": "[CALL GUIDELINES]\n" + guide})
+                if guide_key:
+                    try:
+                        rds.setex(guide_key, 3600, "1")
+                    except Exception:
+                        pass
 
     # Persona block (tone, objectives, behaviors)
-    persona_txt = persona.persona_block()
-    if persona_txt:
-        send = True
-        persona_key = f"persona:{conv_key}"
-        try:
-            if rds.get(persona_key):
-                send = False
-        except Exception:
-            pass
-        if send:
-            msgs.append({"role": "user", "content": "[PERSONA RULES]\n" + persona_txt})
+    if not primer_sent:
+        persona_txt = persona.persona_block()
+        if persona_txt:
+            send = True
+            persona_key = f"persona:{conv_key}"
             try:
-                rds.setex(persona_key, 3600, "1")
+                if rds.get(persona_key):
+                    send = False
             except Exception:
-                pass
+                send = not (_mark_once(persona_key))
+            if send:
+                msgs.append({"role": "user", "content": "[PERSONA RULES]\n" + persona_txt})
+                if persona_key:
+                    try:
+                        rds.setex(persona_key, 3600, "1")
+                    except Exception:
+                        pass
 
     # Flow stage and suggested question
     plan = persona.flow_plan()
@@ -378,13 +414,15 @@ def _assemble_messages():
             msgs.append({"role": "user", "content": "[CALL STAGE]\n" + hint_txt})
         q = persona.stage_question(stage_id)
         if q:
-            flow_state.record_question(q)
-            msgs.append({"role": "user", "content": "[SUGGESTED QUESTION]\nAsk something like: " + q})
+            import re as _re
+            q_clean = _re.sub(r"\{[^}]+\}", "that area", q)
+            flow_state.record_question(q_clean)
+            msgs.append({"role": "user", "content": "[SUGGESTED QUESTION]\nAsk something like: " + q_clean})
 
     # Lead facts (company, city, role, etc.)
     snapshot = lead_context.get_current_snapshot()
     lead_facts = persona.lead_fact_snippet(snapshot.get("lead"))
-    if lead_facts:
+    if lead_facts and not primer_sent:
         msgs.append({"role": "user", "content": "[LEAD FACTS]\n" + lead_facts})
 
     # Summary cue based on the most recent user utterance
@@ -458,8 +496,8 @@ def _assemble_messages():
             elif stage_id == "close_cta":
                 summary_instruction += (
                     " In one short sentence, explain how Cloumen can help based on what they already told you, choosing the most relevant "
-                    "among AI solutions, web/app work, cloud or data help, digital marketing, or technology consulting. "
-                    "Then ask for a specific next step such as a short demo or a callback time."
+                    "among AI solutions, web and app work, cloud or data help, digital marketing, or technology consulting. "
+                    "Ask if they want to go deeper now; only offer to schedule if they prefer later."
                 )
             else:
                 summary_instruction += " Follow with a curious, open-ended question."
@@ -472,6 +510,15 @@ def _assemble_messages():
         print("[LLM Prompt Preview] ", _json.dumps(msgs[-6:], indent=2))
     except Exception:
         pass
+
+    # Mark primer as sent so heavy blocks are skipped on subsequent turns
+    if not primer_sent:
+        try:
+            rds.setex(primer_key, 3600, "1")
+        except Exception:
+            _primer_local.add(primer_key)
+        _primer_done.add(primer_key)
+
     return msgs
 
 # ===============================================================
@@ -497,6 +544,9 @@ def deepseek_reply(prompt: str) -> str:
     g = guards.referral_guard(prompt)
     if g:
         return g
+    g = guards.abuse_guard(prompt)
+    if g:
+        return g
     g = guards.gatekeeper_guard(prompt)
     if g:
         return g
@@ -510,6 +560,21 @@ def deepseek_reply(prompt: str) -> str:
     if g:
         return g
     g = guards.price_guard(prompt)
+    if g:
+        return g
+    g = guards.abuse_guard(prompt)
+    if g:
+        return g
+    g = guards.services_guard(prompt)
+    if g:
+        return g
+    g = guards.service_explainer_guard(prompt)
+    if g:
+        return g
+    g = guards.service_explainer_guard(prompt)
+    if g:
+        return g
+    g = guards.services_guard(prompt)
     if g:
         return g
 

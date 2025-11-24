@@ -195,10 +195,16 @@ def _text_seems_valid(s: str) -> bool:
 
     wc = word_count(t)
 
-    # Allow single-word answers like "yes", "no", "correct"
+    # Allow single-word answers only if they are useful (not pronouns/noise)
     if wc == 1:
-        # still ignore 1-character garbage like "a"
-        return len(t) >= 2
+        tok = t.lower()
+        allowed = {
+            "yes", "no", "yeah", "yep", "nope", "ok", "okay", "sure", "right",
+            "correct", "absolutely", "ready", "go", "stop", "start", "done"
+        }
+        if tok in allowed:
+            return True
+        return False
 
     # For multi-word utterances, keep stricter filters
     if len(t) < MIN_VALID_CHARS:

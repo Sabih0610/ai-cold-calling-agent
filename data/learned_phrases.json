@@ -1,74 +1,206 @@
 {
-  "yeah this is throw in": {
-    "count": 1,
-    "reply": "Great, thanks for taking the time, Rowan. How are you currently handling customer intake and follow-ups right now?"
-  },
   "hello": {
-    "count": 2,
-    "reply": "Hey there! how is your day going?"
-  },
-  "why arent you listening properly i told you dad why are you calling me": {
     "count": 1,
-    "reply": "I am so sorry, I must have misheard you. Did I call the wrong number?"
+    "reply": "Hi there! Thanks for taking my call."
   },
-  "no this is the right number": {
+  "what services": {
     "count": 1,
-    "reply": "I understand, and I apologize for the confusion. Would a quick 10-minute demo this week show you what is possible?"
+    "reply": "We help with marketing and growth, web and app builds, cloud and DevOps, data and analytics, automation and AI agents, and tech consulting. Which of those matters most for you?"
   },
-  "oh yeah this is rowan he was there": {
+  "who are you": {
     "count": 1,
-    "reply": "Great, thanks for taking the time, Rowan. How are you currently bringing in new customers or leads?"
+    "reply": "I am Emma with Cloumen. We support marketing, web and app, cloud and DevOps, data and analytics, automation and AI, and consulting. Where should we focus for you?"
   },
-  "please dont put your lab words like what": {
+  "i should tell you anything alright so tell me something about your services like what companies or businesses you provide for business": {
     "count": 1,
-    "reply": "you are right, I apologize. How do you handle new customer inquiries and follow-ups right now?"
+    "reply": "Of course. team right now?"
   },
-  "im going to tell you": {
+  "then you can get to like what youre told youre eating": {
     "count": 1,
-    "reply": "I appreciate you being direct. Is that because you already have a system you are happy with, or is it just bad timing?"
+    "reply": "I hear you. Are you finding it hard to keep track of everything?"
   },
-  "thank you": {
+  "um currently yeah i think so": {
     "count": 1,
-    "reply": "you are very welcome!"
+    "reply": "Glad to hear your website is working well for you. How are you currently bringing in new customers or leads?"
   },
-  "right now": {
+  "through social media marketing and what before by what": {
     "count": 1,
-    "reply": "I understand you are in the middle of something right now. Would a short 15-minute demo later this week show you how we can help with that?"
+    "reply": "Got it, so you are using social media for leads. How do you handle the follow-ups once someone shows interest?"
   },
-  "im yadav zervain with this": {
+  "like we have some more art from earth some more digital and all that": {
     "count": 1,
-    "reply": "Got it, thanks for clarifying, Yadav. How are you currently handling customer intake and follow-ups right now?"
+    "reply": "I see, so you have a mix of physical and digital art to manage. Do you want ideas on marketing, web/app, or automation to help with that?"
   },
-  "no": {
+  "all about jazz and everything else": {
     "count": 1,
-    "reply": "that is okay, I completely understand."
+    "reply": "It sounds like you have a lot of creative work to manage. Do you prefer to explore options now, or should I send a short outline first?"
   },
-  "hello where are you following me": {
+  "i dont know like i didnt know you guys at all and what you do for your services": {
     "count": 1,
-    "reply": "Hi Yadav, this is Emma from Cloumen. How are you currently handling customer intake and follow-ups right now?"
+    "reply": "That is completely understandable—we just connected. We help with marketing, web/app, cloud/DevOps, data/analytics, automation/AI, and consulting. Which lane feels most relevant?"
   },
-  "my question tells me": {
+  "yeah this is rowan isnt it": {
     "count": 1,
-    "reply": "I hear you. What would need to be true for you to consider looking at a new way to handle your customer follow-ups?"
+    "reply": "Yes, that is right. How are you currently handling new customer intake and follow-ups?"
   },
-  "you": {
+  "ill share a title here and tell me some other things like what services do you use company also": {
     "count": 1,
-    "reply": "(Softly) Hello? Is anyone there?"
+    "reply": "I appreciate you asking, Rowan. Could you tell me a bit about what you do at your company?"
   },
-  "ill know if you would like to know well speak later bye": {
+  "demolight wouldnt tell you anything unless you tell me what services you offer": {
     "count": 1,
-    "reply": "I understand, Rowan. When would be better to connect next week?"
+    "reply": "I understand you would like to know what we do first. what is one area you find takes up too much of your time right now?"
   },
-  "no i dont have time next week i never want you to contact me again have a good day bye": {
+  "right now we are working on a migration project we have a cloud which is going to be wanted to our developers covering for us we are working on a service": {
     "count": 1,
-    "reply": "Understood, Rowan. Just to clarify, is this a bad time, or have you already found a solution for your tech needs?"
+    "reply": "It sounds like you are in the middle of a cloud migration for your developers. outline and we can schedule a quick chat for later?"
   },
-  "i dont want to discuss anything with you but": {
+  "why tell me something all explaining to me like how do you guys handle an explaining": {
     "count": 1,
-    "reply": "I hear that you do not want to discuss anything. I will make sure we do not contact you again."
+    "reply": "I hear you, it sounds like you want a clearer explanation. chat for later?"
   },
-  "bye": {
+  "i want to explore it now": {
     "count": 1,
-    "reply": "Bye for now! Hope to talk soon."
+    "reply": "I understand you are ready to explore this now. Would you like to keep talking now, or would you prefer to schedule a short follow-up?"
+  },
+  "now i want to ask you to do that how": {
+    "count": 1,
+    "reply": "I understand you are ready to move forward with your cloud migration. quick chat for later?"
+  },
+  "ask someone professionally like how do you guys could help me": {
+    "count": 1,
+    "reply": "I understand you are looking for a professional explanation of how we can help. Would you like to keep exploring this now, or would you prefer to schedule a short follow-up?"
+  },
+  "whats good about doing anything while youre recording": {
+    "count": 1,
+    "reply": "I understand it can feel a bit formal when you know a call is being recorded. How are you currently handling new customer intake and follow-ups right now?"
+  },
+  "im im im sure im not": {
+    "count": 1,
+    "reply": "I hear you, it sounds like you are pretty sure this is not a fit. Would you be open to exploring if that is possible, or should I just let you go?"
+  },
+  "what a wish you have with me right now i dont think that i have a right to meet you": {
+    "count": 1,
+    "reply": "I understand, and I appreciate your honesty. time?"
+  },
+  "i dont like it": {
+    "count": 1,
+    "reply": "I hear that you are not liking this approach, and I respect that. go?"
+  },
+  "dont mind about my cooking you idiot what have i shared with you": {
+    "count": 1,
+    "reply": "I hear that you are frustrated and feel I have not been listening. Would you like to explore that a little more now, or should we leave it here?"
+  },
+  "even though i find that all those issues what should i tell you": {
+    "count": 1,
+    "reply": "I hear you. what is the biggest bottleneck slowing your team down right now?"
+  },
+  "now my main question is how far should i tell you anything": {
+    "count": 1,
+    "reply": "I completely understand. you are wondering how much detail to share with a stranger on the phone."
+  },
+  "ill tell you": {
+    "count": 1,
+    "reply": "I appreciate you being willing to talk. Is the main hesitation about timing, or that you already have someone helping with this?"
+  },
+  "im sure being the lie you know what the question that youre asking me about um well i am not properly comfortable hearing about the business details of you": {
+    "count": 1,
+    "reply": "I understand you are not comfortable sharing business details, and that is perfectly okay. info for you to look at later?"
+  },
+  "thats it you never knew what we": {
+    "count": 1,
+    "reply": "I hear that. info for you to look at later?"
+  },
+  "ill get you": {
+    "count": 1,
+    "reply": "I hear that. Would you prefer I just send a brief email for you to look at later?"
+  },
+  "thats how we were talking bye if youre saying that hello hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey hey": {
+    "count": 1,
+    "reply": "It sounds like the connection might be breaking up. I will let you go."
+  },
+  "im going to turn the camera off": {
+    "count": 1,
+    "reply": "I understand you are turning the camera off. you to look at later?"
+  },
+  "um is this anybody calling me": {
+    "count": 1,
+    "reply": "Yes, this is Emma from Cloumen. Am I speaking with Taylor at Gamma Solutions?"
+  },
+  "oh yeah hello hello i cant hear you you": {
+    "count": 1,
+    "reply": "Hi Taylor, this is Emma from Cloumen. Am I speaking with you?"
+  },
+  "yeah this is kywa vultus": {
+    "count": 1,
+    "reply": "Hi Kywa, thanks for confirming. send some info first?"
+  },
+  "with this hand bar recall me": {
+    "count": 1,
+    "reply": "I am sorry, I think we might have a bad connection. Am I speaking with Hayden from Gamma Group?"
+  },
+  "yeah this is a hidden window yeah hello they cant hear you": {
+    "count": 1,
+    "reply": "It sounds like you are in a bit of a tricky spot with the connection there. That can be really frustrating when you are trying to get work done."
+  },
+  "like what the hells going on i can get your point of falling right now": {
+    "count": 1,
+    "reply": "I hear you, Rowan. team each week?"
+  },
+  "yeah it could be meaningful for me but i dont think that you guys have enough capacity or capability to handle my test": {
+    "count": 1,
+    "reply": "I hear that, Rowan. It sounds like you are worried we might not be able to handle the scale or complexity of what."
+  },
+  "like would you want i think there could be beneficial for me but i dont think i should go with you guys because i am already working with someone": {
+    "count": 1,
+    "reply": "I completely understand, Rowan. It sounds like you see the potential benefit but are already working with another partner."
+  },
+  "yeah a brief call": {
+    "count": 1,
+    "reply": "Got it, so a brief follow-up call would be the best fit. for another time?"
+  },
+  "theres no harm in doing that": {
+    "count": 1,
+    "reply": "Perfect, I appreciate that openness. brief follow-up for another time?"
+  },
+  "yeah i want to explore it right now like yeah we should explore and you should explain the things like right now and we can do a followup later": {
+    "count": 1,
+    "reply": "I hear you, Rowan. you are open to exploring the potential now and then having a more structured follow-up later."
+  },
+  "yeah so let me point out what is the menu of the course": {
+    "count": 1,
+    "reply": "I appreciate you laying that out, Rowan. It sounds like you want to see the full scope of what is possible."
+  },
+  "i dont want to know the call": {
+    "count": 1,
+    "reply": "I understand you do not want to get into the details of the call right now, Rowan. It sounds like you are open to the idea but want to keep it simple."
+  },
+  "i am an incoming agent yeah i want an agent i am an agent": {
+    "count": 1,
+    "reply": "I hear you, Rowan. schedule a quick follow-up?"
+  },
+  "i want an ai agent that could help": {
+    "count": 1,
+    "reply": "I hear you, Rowan. Would you like to explore what that could look like for your specific needs right now?"
+  },
+  "i love you": {
+    "count": 1,
+    "reply": "Thank you, Rowan, I appreciate that. to schedule a quick follow-up call for later?"
+  },
+  "to put a code calling again": {
+    "count": 1,
+    "reply": "I understand you want to set up a system to handle calls automatically. schedule a brief follow-up?"
+  },
+  "calling engine that could die": {
+    "count": 1,
+    "reply": "I understand you are dealing with a calling engine that is unreliable and failing. a quick call for later?"
+  },
+  "yeah so what i want is that i want to build a code calling agent that would like": {
+    "count": 1,
+    "reply": "I hear you want to build a reliable code calling agent that doesn't fail. I schedule a quick call for later?"
+  },
+  "on behalf of our fellow": {
+    "count": 1,
+    "reply": "I understand you are looking to build this on behalf of your team. call for later?"
   }
 }

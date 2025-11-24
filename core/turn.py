@@ -5,8 +5,8 @@ from core.tts import speak
 from core.audio import audiosocket_ready
 
 # Coalescer state
-COALESCE_GRACE_MS = int(os.getenv("COALESCE_GRACE_MS", "500"))
-COALESCE_MAX_MS   = int(os.getenv("COALESCE_MAX_MS", "1500"))
+COALESCE_GRACE_MS = int(os.getenv("COALESCE_GRACE_MS", "450"))
+COALESCE_MAX_MS   = int(os.getenv("COALESCE_MAX_MS", "1200"))
 HEARTBEAT_IDLE_SEC= int(os.getenv("HEARTBEAT_IDLE_SEC", "60"))
 HEARTBEAT_TEXT    = os.getenv("HEARTBEAT_TEXT", "Still there? What should we do next?")
 
